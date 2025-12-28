@@ -1,0 +1,25 @@
+{
+  "name": "@ai-commerce/lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda handlers for AI commerce recommender",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint . --ext .ts",
+    "clean": "rm -rf dist",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@ai-commerce/core": "workspace:*",
+    "@types/aws-lambda": "^8.10.119",
+    "aws-lambda": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist"
+  ]
+}

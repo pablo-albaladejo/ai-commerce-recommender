@@ -1,0 +1,29 @@
+{
+  "name": "@ai-commerce/scripts",
+  "version": "1.0.0",
+  "description": "Build and utility scripts for AI commerce recommender",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint . --ext .ts",
+    "clean": "rm -rf dist",
+    "build:index": "node dist/build-index.js",
+    "upload:artifacts": "node dist/upload-artifacts.js",
+    "download:shopify-sitemap": "node dist/download-shopify-sitemap.js"
+  },
+  "dependencies": {
+    "@ai-commerce/core": "workspace:*",
+    "@aws-sdk/client-s3": "^3.400.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.400.0",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/xml2js": "^0.4.14",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist"
+  ]
+}
