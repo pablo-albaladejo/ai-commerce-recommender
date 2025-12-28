@@ -1,0 +1,55 @@
+---
+description: Guidelines for AI agents working on this codebase
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Agent Guidelines
+
+## When Implementing Features
+
+1. **Propose the minimal change set** - Don't over-engineer
+2. **Keep costs low** - Serverless, pay-per-use
+3. **Add or update tests** - All changes should be tested
+4. **Update docs if behavior changes** - Keep AGENTS.md and docs/ current
+5. **Avoid heavy dependencies** - Justify any new dependency
+6. **Write ALL code in English** - Regardless of input language
+
+## Glossary
+
+| Term | Definition |
+|------|------------|
+| **BM25** | Lexical scoring for keyword match |
+| **Embeddings** | Semantic vectors representing meaning |
+| **Cosine similarity** | Metric comparing embedding vectors |
+| **RRF** | Reciprocal Rank Fusion - combines multiple ranked lists |
+| **Artifacts** | Precomputed files stored in S3 and loaded by Lambda |
+
+## Common Patterns
+
+### Adding a new field to product schema
+1. Add to `types.ts` as **optional** field
+2. Update normalization in `normalize.ts`
+3. Rebuild artifacts
+4. Update any consuming code
+
+### Adding a new filter
+1. Add filter type to `types.ts`
+2. Implement in `filters.ts`
+3. Add tests
+4. Document in API contract
+
+### Optimizing retrieval
+1. First try: Better `doc_text` composition
+2. Then: Better filters + attributes
+3. Then: Query rewriting
+4. Last resort: LLM improvements (keep tokens low)
+
+## Don'ts
+
+- ❌ Don't add always-on infrastructure without explicit request
+- ❌ Don't put business logic in Lambda handlers
+- ❌ Don't send full product descriptions to LLM
+- ❌ Don't break backwards compatibility without migration plan
+- ❌ Don't store secrets in repository
+- ❌ Don't write code/comments in non-English languages

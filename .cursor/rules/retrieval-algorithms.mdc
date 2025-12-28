@@ -1,0 +1,77 @@
+---
+description: Retrieval algorithms and ranking details
+globs: ["packages/core/src/lib/*.ts"]
+alwaysApply: false
+---
+
+# Retrieval Algorithms
+
+## BM25 (Lexical Search)
+
+- **Input**: `doc_text` field from normalized products
+- **Output**: Ranked list of product IDs
+- **Purpose**: Keyword matching, exact terms
+
+Implementation in: `packages/core/src/lib/bm25.ts`
+
+## Embeddings (Semantic Search)
+
+- **Offline**: Product embeddings computed at build time (Titan)
+- **Online**: Query embedding computed per request
+- **Similarity**: Cosine similarity
+- **Output**: Ranked list of product IDs
+
+Implementation in: `packages/core/src/lib/cosine.ts`
+
+## Rank Fusion (RRF)
+
+Combine BM25 and embedding ranks using Reciprocal Rank Fusion:
+
+```
+score = Σ 1 / (k + rank)
+```
+
+- Default `k = 60`
+- Output: Fused ranking combining both signals
+
+Implementation in: `packages/core/src/lib/fusion.ts`
+
+## Hard Filters
+
+Applied **after** fusion to reduce candidate set:
+
+| Filter | Type | Description |
+|--------|------|-------------|
+| `available_only` | boolean | Only available products |
+| `max_price` | number | Price ceiling |
+| `vendor` | string | Specific vendor |
+| `product_type` | string | Product category |
+| `include_tags` | string[] | Must have these tags |
+| `exclude_tags` | string[] | Must not have these tags |
+
+Implementation in: `packages/core/src/lib/filters.ts`
+
+## Pipeline Flow
+
+```
+User Query
+    ↓
+┌───────────────────────────────┐
+│  1. BM25 Search (topK)        │
+│  2. Embedding Search (topK)   │
+└───────────────────────────────┘
+    ↓
+┌───────────────────────────────┐
+│  3. Rank Fusion (RRF)         │
+└───────────────────────────────┘
+    ↓
+┌───────────────────────────────┐
+│  4. Hard Filters              │
+└───────────────────────────────┘
+    ↓
+┌───────────────────────────────┐
+│  5. LLM Re-rank (top 5-10)    │
+└───────────────────────────────┘
+    ↓
+Final Response
+```

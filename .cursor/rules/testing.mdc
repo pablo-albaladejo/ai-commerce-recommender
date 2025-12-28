@@ -1,0 +1,52 @@
+---
+description: Testing strategy and requirements
+globs: ["**/*.test.ts", "**/*.spec.ts", "packages/**/*.ts"]
+alwaysApply: false
+---
+
+# Testing Strategy
+
+## Minimum Required Tests
+
+### Normalization
+- Normalize function produces stable schema
+- Snapshot tests for normalization output
+- Handle edge cases (missing fields, malformed data)
+
+### Retrieval
+- BM25 returns deterministic results for same input
+- Cosine similarity calculates correctly
+- Rank fusion (RRF) behaves as expected
+
+### Filters
+- Filters work correctly
+- Filters don't drop all results unexpectedly
+- Edge cases: empty results, all filtered out
+
+## Test Fixtures
+
+Use small fixture catalog in `examples/generic-json/` for tests:
+- Predictable product data
+- Covers edge cases
+- Fast to load
+
+## Testing Principles
+
+1. **Core business logic must be testable in isolation**
+   - No AWS dependencies in unit tests
+   - Mock external services
+
+2. **Deterministic tests**
+   - Same input = same output
+   - No random behavior in tests
+
+3. **Test files location**
+   - Co-locate tests with source: `*.test.ts` next to `*.ts`
+   - Or use `__tests__/` directories
+
+## Commands
+```bash
+pnpm test                              # Run all tests
+pnpm --filter @ai-commerce/core test   # Test only core package
+pnpm --filter @ai-commerce/lambda test # Test only lambda package
+```

@@ -1,0 +1,61 @@
+---
+description: Security and compliance guidelines
+globs: ["**/*.ts", "**/*.env*", "**/cdk*.ts"]
+alwaysApply: false
+---
+
+# Security & Compliance
+
+## Secrets Management
+
+**DO NOT store secrets in the repository:**
+- ❌ API keys in code
+- ❌ AWS credentials in code
+- ❌ Webhook secrets in code
+- ❌ `.env` files with real secrets committed
+
+**USE:**
+- ✅ AWS Secrets Manager
+- ✅ Environment variables (injected at runtime)
+- ✅ CDK SecretValue references
+
+## Environment Variables
+
+### Lambda Runtime
+```
+CATALOG_BUCKET        # S3 bucket with artifacts
+CATALOG_PREFIX        # Prefix path (e.g. "itower/")
+TITAN_EMBED_MODEL_ID  # Bedrock embeddings model
+CLAUDE_MODEL_ID       # Bedrock chat model
+AWS_REGION
+LOG_LEVEL             # debug|info|warn|error
+CACHE_TTL_SECONDS     # Artifact refresh window
+```
+
+### Build Scripts
+```
+CATALOG_SOURCE_URL    # Or input file path
+CATALOG_BUCKET
+CATALOG_PREFIX
+```
+
+## Webhook Security
+
+For channel adapters (Telegram, Instagram/Meta):
+- **Validate webhook signatures** before processing
+- Use platform-specific verification methods
+- Reject unsigned or invalid requests
+
+## Rate Limiting
+
+If exposed publicly:
+- Implement rate limiting on API Gateway
+- Consider per-IP or per-user limits
+- Log and alert on suspicious activity
+
+## Data Privacy
+
+- **Do not collect or store personal data** unless explicitly required
+- Log only necessary information
+- Sanitize user input before logging
+- Follow GDPR/privacy regulations as applicable

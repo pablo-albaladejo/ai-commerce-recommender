@@ -1,0 +1,65 @@
+---
+description: Development workflow and common tasks
+globs: ["**/*.ts"]
+alwaysApply: false
+---
+
+# Development Workflow
+
+## Common Commands
+
+```bash
+# Build & Development
+pnpm build              # Build all packages
+pnpm dev                # Start development mode (watch)
+pnpm clean              # Clean all build artifacts
+
+# Testing & Quality
+pnpm test               # Run tests in all packages
+pnpm lint               # Lint all packages
+pnpm format             # Format all files
+
+# Infrastructure
+pnpm cdk:deploy         # Deploy infrastructure
+pnpm cdk:diff           # Show infrastructure diff
+pnpm cdk:destroy        # Destroy infrastructure
+
+# Indexing
+pnpm index:build        # Build artifacts locally
+pnpm index:upload       # Upload artifacts to S3
+pnpm index:run          # Build + upload artifacts
+
+# Utilities
+pnpm download:shopify-sitemap  # Download products from Shopify sitemap
+```
+
+## Adding a New Catalog Source
+
+1. Implement parser in `packages/core/src/lib/normalize.ts`
+2. Ensure normalized output matches canonical schema
+3. Update `packages/scripts/src/build-index.ts`
+4. Rebuild artifacts and validate retrieval works
+
+## Adding a New Channel Adapter (Telegram/Instagram)
+
+1. Create Lambda handler under `packages/lambda/src/*-webhook.ts`
+2. Adapter should only translate channel messages ↔ `/chat` API
+3. Avoid channel-specific business logic in core
+4. Validate webhook signatures
+
+## Improving Recommendation Quality
+
+Priority order:
+1. Better `doc_text` composition
+2. Better hard filters + inferred attributes
+3. Add query rewriting / constraint extraction
+4. LLM re-ranking improvements (keep tokens low)
+
+## Quick Start
+
+1. Deploy infra: `pnpm cdk:deploy`
+2. Build + upload artifacts: `pnpm index:run`
+3. Test endpoint:
+```bash
+curl -X POST <api>/chat -d '{"userMessage":"Need a fiberglass ladder under 600"}'
+```
