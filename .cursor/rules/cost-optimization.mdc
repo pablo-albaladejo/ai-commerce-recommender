@@ -1,0 +1,48 @@
+---
+description: Cost optimization rules for serverless architecture
+globs: ["**/*.ts"]
+alwaysApply: true
+---
+
+# Cost Optimization Rules
+
+## Infrastructure Constraints
+
+**DO NOT introduce always-on infrastructure unless explicitly requested:**
+- ❌ OpenSearch
+- ❌ RDS
+- ❌ ElastiCache
+- ❌ ECS/EKS clusters
+
+**PREFER serverless and pay-per-use:**
+- ✅ S3 for artifact storage
+- ✅ Lambda for compute
+- ✅ API Gateway (HTTP API)
+- ✅ In-memory indices loaded on Lambda cold start
+
+## LLM Usage Optimization
+
+**Limit LLM calls to:**
+1. (Optional) Constraint extraction from user query
+2. Final re-ranking + response generation (top 5–10 candidates only)
+
+**Token Optimization:**
+- Keep prompts short
+- Avoid sending full product descriptions to the LLM
+- Send only essential fields for re-ranking
+- Use structured output schemas
+
+## Retrieval Optimization
+
+**Before LLM:**
+1. BM25 (lexical) - fast, no API cost
+2. Embedding similarity (semantic) - precomputed vectors
+3. Rank fusion (RRF) - combine results
+4. Hard filters - reduce candidates
+
+**Only then call LLM** with filtered top candidates (5-10 products max)
+
+## Lambda Optimization
+- Cache artifacts in Lambda memory across warm invocations
+- Use `CACHE_TTL_SECONDS` to control refresh window
+- Keep Lambda memory size appropriate for artifact loading

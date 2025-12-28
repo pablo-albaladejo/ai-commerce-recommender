@@ -1,0 +1,41 @@
+---
+description: Monorepo structure and separation of concerns
+globs: ["packages/**/*.ts"]
+alwaysApply: true
+---
+
+# Monorepo Structure Rules
+
+## Package Organization
+
+```
+packages/
+├── core/      # @ai-commerce/core - Core business logic (platform-neutral)
+├── lambda/    # @ai-commerce/lambda - AWS Lambda handlers only
+├── scripts/   # @ai-commerce/scripts - Offline indexing and utility scripts
+└── infra/     # @ai-commerce/infra - CDK infrastructure definitions
+```
+
+## Strict Separation of Concerns
+
+### `packages/core/src/lib/*`
+- Contains shared business logic
+- MUST remain **platform-neutral**
+- Files: `bedrock.ts`, `bm25.ts`, `cosine.ts`, `fusion.ts`, `catalog.ts`, `normalize.ts`, `types.ts`, `filters.ts`, `prompt.ts`
+
+### `packages/lambda/src/*`
+- Contains **runtime handlers only**
+- Files: `chat-handler.ts`, `telegram-webhook.ts`, `instagram-webhook.ts`
+- Should delegate business logic to `@ai-commerce/core`
+
+### `packages/scripts/src/*`
+- For **offline indexing and utility scripts only**
+- Files: `build-index.ts`, `upload-artifacts.ts`, `download-shopify-sitemap.ts`
+
+### `packages/infra/src/*`
+- Contains **CDK infrastructure definitions only**
+- Files: `cdk-app.ts`, `stack.ts`
+
+## Dependencies
+- Cross-package dependencies MUST use workspace references: `"@ai-commerce/core": "workspace:*"`
+- Avoid circular dependencies between packages

@@ -1,0 +1,44 @@
+---
+description: Code language and quality standards
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.md"]
+alwaysApply: true
+---
+
+# Code Standards
+
+## Language Requirements
+
+**ALL code MUST be written in English:**
+- Variable names
+- Function names
+- Class names
+- Comments (inline, JSDoc)
+- Documentation (README, docs/)
+
+This applies **regardless of the input language or user's native language**.
+
+## Function Purity
+
+### Pure Functions (deterministic, no side effects)
+- Retrieval logic
+- Fusion algorithms
+- Filter functions
+- Cosine similarity
+- BM25 scoring
+
+### I/O Functions (allowed to have side effects)
+Only these files should perform I/O:
+- `bedrock.ts` - AWS Bedrock API calls
+- `catalog.ts` - S3 artifact loading/caching
+- Handler files in `packages/lambda/src/`
+
+## TypeScript Best Practices
+- Use strict TypeScript configuration
+- Prefer explicit types over `any`
+- Use interfaces for object shapes
+- Export types from `types.ts`
+
+## Core Business Logic
+- `@ai-commerce/core` should be testable in isolation
+- Avoid AWS SDK dependencies in pure business logic files
+- Keep functions small and focused

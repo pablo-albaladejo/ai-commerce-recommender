@@ -1,0 +1,38 @@
+---
+description: High-level architecture rules for the AI Commerce Recommender
+globs: ["**/*.ts", "**/*.tsx", "**/*.js"]
+alwaysApply: true
+---
+
+# Architecture Rules
+
+This is a **serverless commerce product recommender chatbot** on AWS with hybrid retrieval.
+
+## Tech Stack
+- **Package Manager**: pnpm with workspaces (monorepo)
+- **Retrieval**: BM25 + Embeddings + Rank Fusion (RRF)
+- **Semantic scoring**: Cosine similarity
+- **LLM**: AWS Bedrock (Claude Haiku or similar)
+- **Embeddings**: AWS Bedrock (Titan Embeddings)
+- **Infrastructure**: AWS CDK (TypeScript)
+- **Runtime**: AWS Lambda + API Gateway (HTTP API) + S3
+
+## Offline Indexing (build-time)
+1. Ingest catalog JSON (Shopify or generic)
+2. Normalize products into a stable schema
+3. Build BM25 index from `doc_text`
+4. Generate product embeddings (Titan)
+5. Upload artifacts to S3: `catalog.json`, `bm25_index.json`, `embeddings.bin/json`, `id_map.json`
+
+## Online Runtime (per request)
+1. Load artifacts from S3 into Lambda memory (cached across warm invocations)
+2. Run BM25 search (topK) + Embedding search (topK, cosine similarity)
+3. Combine ranks with Reciprocal Rank Fusion (RRF)
+4. Apply hard filters (availability, price, vendor, type, tags)
+5. Call LLM to re-rank top candidates and craft a helpful response
+
+## Key Principles
+- Keep everything serverless and low-cost
+- No always-on infrastructure (no OpenSearch, no RDS)
+- With ~500 products, everything runs in-memory
+- Artifacts are precomputed and stored in S3
