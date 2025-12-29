@@ -13,7 +13,7 @@ jest.mock('../../infrastructure/shared/telegram-client', () => ({
   }),
 }));
 
-// Mock the curried use-case: processChatMessage(deps) => (input) => result
+// Mock the curried use-case: processChatMessage(sendResponse) => (input) => result
 const mockUseCaseExecutor = jest.fn();
 jest.mock('../../application/use-cases/process-chat-message', () => ({
   processChatMessage: jest.fn(

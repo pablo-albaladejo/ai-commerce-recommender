@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import type { ShopifyProduct } from '@ai-commerce/core';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
@@ -19,59 +20,7 @@ type SitemapData = {
   };
 };
 
-type ShopifyProduct = {
-  id: number;
-  title: string;
-  handle: string;
-  description: string;
-  published_at: string;
-  created_at: string;
-  updated_at: string;
-  vendor: string;
-  product_type: string;
-  tags: string[];
-  variants: Array<{
-    id: number;
-    title: string;
-    option1: string | null;
-    option2: string | null;
-    option3: string | null;
-    sku: string;
-    requires_shipping: boolean;
-    taxable: boolean;
-    featured_image: {
-      src?: string;
-      alt?: string;
-      width?: number;
-      height?: number;
-    } | null;
-    available: boolean;
-    price: string;
-    grams: number;
-    compare_at_price: string | null;
-    position: number;
-    product_id: number;
-    created_at: string;
-    updated_at: string;
-  }>;
-  images: Array<{
-    id: number;
-    created_at: string;
-    position: number;
-    updated_at: string;
-    product_id: number;
-    src: string;
-    variant_ids: number[];
-    width: number;
-    height: number;
-    alt: string | null;
-  }>;
-  options: Array<{
-    name: string;
-    position: number;
-    values: string[];
-  }>;
-};
+// ShopifyProduct type is imported from @ai-commerce/core to keep schemas consistent across the template.
 
 const fetchUrl = async (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {

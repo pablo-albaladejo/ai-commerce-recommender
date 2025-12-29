@@ -2,6 +2,9 @@
 
 Postman collection for testing the AI Commerce Recommender Telegram webhook.
 
+> Note: the current Lambda use-case is a **mock**. It sends an acknowledgement message to Telegram
+> and returns a small JSON payload to the webhook caller.
+
 ## File
 
 - `telegram-webhook.postman_collection.json` - Complete collection
@@ -140,11 +143,17 @@ All simulated requests follow the
 
 ### Success (200)
 
+For webhook calls with a text message, the Lambda returns a small processing result:
+
 ```json
 {
   "success": true,
-  "answer": "Here are my recommendations...",
-  "recommendations": [...]
+  "processed": {
+    "userId": 123,
+    "chatId": 123,
+    "messageLength": 42
+  },
+  "timestamp": "2025-01-01T00:00:00.000Z"
 }
 ```
 

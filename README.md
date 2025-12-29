@@ -1,15 +1,20 @@
-# AI Commerce Recommender
+# AI Commerce Recommender (Template)
 
-A **pnpm monorepo** for building a serverless commerce product recommender chatbot on AWS.
+A **pnpm monorepo template** for building a **serverless Telegram chatbot** on AWS that can
+recommend products from a **public Shopify catalog** (no credentials required).
+
+> Current status: the deployed Telegram bot replies with an **acknowledgement message** (mock
+> use-case). The actual recommendation logic lives in `@ai-commerce/core` and is meant to be wired
+> into the Lambda use-case in a later iteration.
 
 ## 🏗️ Architecture
 
-- **Package Manager**: pnpm with workspaces
-- **Hybrid Retrieval**: BM25 + Embeddings + Rank Fusion (RRF)
-- **LLM**: AWS Bedrock (Claude Haiku)
-- **Embeddings**: AWS Bedrock (Titan Embeddings)
-- **Infrastructure**: AWS CDK (TypeScript)
-- **Runtime**: AWS Lambda + API Gateway + S3
+- **Package Manager**: pnpm workspaces (monorepo)
+- **Runtime**: AWS Lambda + API Gateway (HTTP API) + DynamoDB
+- **Catalog pipeline**: download public Shopify products + build artifacts + (optional) upload to S3
+- **Ranking (core)**: BM25-like lexical scoring + heuristic semantic scoring + RRF fusion
+- **LLM (optional)**: AWS Bedrock (present as a service wrapper; not used by the current Lambda
+  flow)
 
 ## 📦 Packages
 
@@ -27,14 +32,19 @@ pnpm install
 # Build all packages
 pnpm build
 
-# Deploy infrastructure
+# Deploy infrastructure (Telegram webhook)
+# 1) Configure packages/infra/.env from packages/infra/env.example
+# 2) Deploy
 pnpm cdk:deploy
 
-# Build and upload artifacts
-pnpm index:run
+# Download products from a public Shopify sitemap (no credentials)
+pnpm download:shopify-sitemap https://example.com/sitemap_products.xml ./data/<merchant>
 
-# Download products from Shopify sitemap
-pnpm download:shopify-sitemap https://example.com/sitemap_products.xml ./data
+# Build local artifacts (normalized catalog + manifest)
+CATALOG_INPUT_FILE=./data/<merchant>/shopify-products.json pnpm index:build
+
+# Upload artifacts to S3 (optional; used by future runtime integration)
+CATALOG_BUCKET=your-bucket CATALOG_PREFIX=<merchant>/ pnpm index:upload
 ```
 
 ## 📋 Available Scripts
@@ -82,8 +92,8 @@ pnpm --filter @ai-commerce/scripts download:shopify-sitemap <url> <dir>
 │   ├── lambda/             # AWS Lambda handlers
 │   ├── scripts/            # Build and utility scripts
 │   └── infra/              # CDK infrastructure
-├── examples/               # Example data and configurations
-├── docs/                   # Documentation
+├── data/                   # Sample downloaded catalogs (local)
+├── postman/                # Postman collection for webhook testing
 ├── pnpm-workspace.yaml     # pnpm workspace configuration
 ├── package.json            # Root package with workspace scripts
 └── tsconfig.json           # Root TypeScript configuration
@@ -112,10 +122,9 @@ pnpm --filter @ai-commerce/scripts download:shopify-sitemap <url> <dir>
 
 ## 📚 Documentation
 
-- [Architecture Guidelines](./.kiro/steering/architecture-guidelines.md)
-- [Data Schema](./.kiro/steering/data-schema.md)
-- [API Contracts](./.kiro/steering/api-contracts.md)
-- [Monorepo Guidelines](./.kiro/steering/monorepo-guidelines.md)
+- **Agent guidance / repo rules**: see `AGENTS.md`
+- **Core package docs**: `packages/core/README.md`
+- **Infrastructure docs**: `packages/infra/README.md` and `packages/infra/DEPLOYMENT.md`
 
 ## 🤖 Agent Guidelines
 

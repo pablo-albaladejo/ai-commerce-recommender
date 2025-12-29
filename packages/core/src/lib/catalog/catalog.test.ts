@@ -236,5 +236,15 @@ describe('Catalog', () => {
       catalogManager.loadProducts([testProduct, newProduct]);
       expect(catalogManager.getProductCount()).toBe(2);
     });
+
+    test('loads normalized products directly', () => {
+      const normalized = loadCatalog([testProduct]);
+      const emptyManager = new CatalogManager();
+
+      emptyManager.loadNormalizedProducts(normalized);
+
+      expect(emptyManager.getProductCount()).toBe(1);
+      expect(emptyManager.getProduct(testProduct.id)).toBeDefined();
+    });
   });
 });

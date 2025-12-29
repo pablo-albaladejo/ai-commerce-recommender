@@ -20,7 +20,9 @@ export type {
 
 // Export schemas for external consumption
 export {
+  NormalizedProductSchema,
   ProductCardSchema,
   ProductSelectionResultSchema,
   SearchFiltersSchema,
+  ShopifyProductSchema,
 } from './lib/types';

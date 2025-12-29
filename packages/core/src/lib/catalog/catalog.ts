@@ -121,7 +121,18 @@ export class CatalogManager {
    * Load products from raw catalog data
    */
   loadProducts(catalogData: unknown[]): void {
-    this.products = loadCatalog(catalogData);
+    this.setProducts(loadCatalog(catalogData));
+  }
+
+  /**
+   * Load already-normalized products (e.g., from prebuilt artifacts)
+   */
+  loadNormalizedProducts(products: NormalizedProduct[]): void {
+    this.setProducts(products);
+  }
+
+  private setProducts(products: NormalizedProduct[]): void {
+    this.products = [...products];
     this.productMap.clear();
 
     // Build product map for fast lookups

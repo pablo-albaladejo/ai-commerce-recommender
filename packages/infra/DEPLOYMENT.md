@@ -26,11 +26,16 @@ pnpm build
 ### 3. Deploy Infrastructure
 
 ```bash
-# Set your Telegram bot token
+# Create an infra env file (recommended)
+cd packages/infra
+cp env.example .env
+# Edit .env and set at least TELEGRAM_BOT_TOKEN
+
+# Or set your Telegram bot token inline
 export TELEGRAM_BOT_TOKEN="your_bot_token_here"
 
 # Deploy to development environment
-./packages/infra/scripts/deploy.sh dev
+./scripts/deploy.sh dev
 ```
 
 The deployment script will:
@@ -69,7 +74,8 @@ pnpm cdk bootstrap
 ```bash
 pnpm cdk deploy telegram-chatbot-dev \
   -c environment=dev \
-  -c telegramBotToken=your_bot_token
+  -c telegramBotToken=your_bot_token \
+  -c telegramSecretToken=your_secret_token
 ```
 
 ### 3. Configure Telegram Webhook
@@ -91,17 +97,23 @@ curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 ### Development
 
+Run from `packages/infra`:
+
 ```bash
 ./scripts/deploy.sh dev
 ```
 
 ### Staging
 
+Run from `packages/infra`:
+
 ```bash
 ./scripts/deploy.sh staging
 ```
 
 ### Production
+
+Run from `packages/infra`:
 
 ```bash
 ./scripts/deploy.sh prod
@@ -115,11 +127,15 @@ You can customize the deployment with CDK context variables:
 pnpm cdk deploy telegram-chatbot-dev \
   -c environment=dev \
   -c telegramBotToken=your_token \
+  -c telegramSecretToken=your_secret \
   -c catalogBucket=your-catalog-bucket \
   -c catalogPrefix=your-prefix/ \
   -c embedModel=amazon.titan-embed-text-v1 \
   -c chatModel=anthropic.claude-3-haiku-20240307-v1:0
 ```
+
+> Note: `catalogBucket` / `catalogPrefix` are provisioned for future catalog loading in Lambda. The
+> current bot use-case is a mock and does not use them yet.
 
 ## Monitoring
 
@@ -231,7 +247,6 @@ The infrastructure is designed for cost efficiency:
 - **HTTP API Gateway**: Lower cost than REST API
 - **ARM64 Lambda**: Better price/performance ratio
 - **Pay-per-request DynamoDB**: No provisioned capacity
-- **Reserved concurrency**: Limits Lambda costs (set to 10)
 - **TTL on DynamoDB**: Automatic data cleanup
 
 Expected costs for low-moderate usage:
