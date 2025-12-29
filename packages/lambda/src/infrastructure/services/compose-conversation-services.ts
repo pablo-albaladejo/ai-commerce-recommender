@@ -3,6 +3,7 @@ import type {
   AddConversationMessage,
   GetConversationContext,
 } from '../../application/services/conversation-service';
+import type { Logger } from '../../application/services/logger';
 import {
   createAddConversationMessage,
   createGetConversationContext,
@@ -31,7 +32,8 @@ export type ConversationServicesConfig = {
  */
 export const composeConversationServices = (
   client: DynamoDBDocumentClient,
-  config: ConversationServicesConfig
+  config: ConversationServicesConfig,
+  logger?: Logger
 ): ConversationServices => {
   const fullConfig = {
     tableName: config.tableName,
@@ -40,12 +42,17 @@ export const composeConversationServices = (
     ttlHours: config.ttlHours ?? 24,
   };
 
-  const getContext = createGetConversationContext(client, fullConfig.tableName);
-  const addMessage = createAddConversationMessage(
+  const getContext = createGetConversationContext(
     client,
-    fullConfig,
-    getContext
+    fullConfig.tableName,
+    logger
   );
+  const addMessage = createAddConversationMessage({
+    client,
+    config: fullConfig,
+    getContext,
+    logger,
+  });
 
   return { getContext, addMessage };
 };

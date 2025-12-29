@@ -15,6 +15,7 @@ import {
   createCustomAlarm,
   createDynamoThrottleAlarm,
   createLambdaAlarm,
+  createSimpleTable,
   createStackOutputs,
   createTable,
 } from './stack-helpers';
@@ -78,16 +79,12 @@ export class TelegramChatbotStack extends Stack {
         gsiName: 'BudgetPeriodIndex',
       }
     );
-    this.conversationContextTable = createTable(
+    this.conversationContextTable = createSimpleTable(
       this,
       'ConversationContextTable',
       `telegram-chatbot-context-${this.stackName}`,
       {
-        pk: 'chatId',
-        sk: 'messageId',
-        gsiPk: 'chatId',
-        gsiSk: 'timestamp',
-        gsiName: 'ChatIdTimestampIndex',
+        pk: 'pk',
       }
     );
 

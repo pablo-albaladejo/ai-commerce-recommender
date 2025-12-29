@@ -44,6 +44,26 @@ export const createTable = (
   return table;
 };
 
+type SimpleTableConfig = {
+  pk: string;
+  removalPolicy?: RemovalPolicy;
+};
+
+export const createSimpleTable = (
+  stack: Stack,
+  id: string,
+  name: string,
+  config: SimpleTableConfig
+): Table => {
+  return new Table(stack, id, {
+    tableName: name,
+    partitionKey: { name: config.pk, type: AttributeType.STRING },
+    billingMode: BillingMode.PAY_PER_REQUEST,
+    timeToLiveAttribute: 'ttl',
+    removalPolicy: config.removalPolicy ?? RemovalPolicy.DESTROY,
+  });
+};
+
 type LambdaAlarmConfig = {
   id: string;
   name: string;

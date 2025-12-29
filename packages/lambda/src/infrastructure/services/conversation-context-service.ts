@@ -8,6 +8,7 @@ import type {
   AddConversationMessage,
   GetConversationContext,
 } from '../../application/services/conversation-service';
+import type { Logger } from '../../application/services/logger';
 
 // ============================================================================
 // Token Estimation
@@ -41,7 +42,8 @@ const calculateTTL = (ttlHours: number): number =>
  */
 export const createGetConversationContext = (
   client: DynamoDBDocumentClient,
-  tableName: string
+  tableName: string,
+  logger?: Logger
 ): GetConversationContext => {
   return async (userId, chatId) => {
     try {
@@ -59,7 +61,12 @@ export const createGetConversationContext = (
         summary: result.Item.summary,
         totalTokens: result.Item.total_tokens || 0,
       };
-    } catch {
+    } catch (error) {
+      logger?.warn('Failed to get conversation context', {
+        userId,
+        chatId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return null;
     }
   };
@@ -157,13 +164,23 @@ const saveContext = async (params: SaveContextParams): Promise<void> => {
 };
 
 /**
+ * Dependencies for creating addConversationMessage
+ */
+export type AddConversationMessageDeps = {
+  client: DynamoDBDocumentClient;
+  config: ConversationServiceConfig;
+  getContext: GetConversationContext;
+  logger?: Logger;
+};
+
+/**
  * Create addConversationMessage function
  */
 export const createAddConversationMessage = (
-  client: DynamoDBDocumentClient,
-  config: ConversationServiceConfig,
-  getContext: GetConversationContext
+  deps: AddConversationMessageDeps
 ): AddConversationMessage => {
+  const { client, config, getContext, logger } = deps;
+
   return async (userId, chatId, message) => {
     const pk = createKey(userId, chatId);
 
@@ -192,8 +209,13 @@ export const createAddConversationMessage = (
         state,
         isUpdate: !!current,
       });
-    } catch {
-      // Silent fail - context is not critical
+    } catch (error) {
+      // Context is not critical, but log for debugging
+      logger?.warn('Failed to save conversation message', {
+        userId,
+        chatId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   };
 };

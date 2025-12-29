@@ -48,10 +48,11 @@ export type TelegramWebhookEvent = TelegramUpdate & {
 // ============================================================================
 
 const tables = {
-  rateLimit: process.env.RATE_LIMIT_TABLE || 'rate-limits',
-  dailyQuota: process.env.DAILY_QUOTA_TABLE || 'daily-quotas',
-  tokenBudget: process.env.TOKEN_BUDGET_TABLE || 'token-budgets',
-  conversationContext: process.env.CONTEXT_TABLE || 'conversation-contexts',
+  rateLimit: process.env.QUOTAS_TABLE_NAME || 'rate-limits',
+  dailyQuota: process.env.QUOTAS_TABLE_NAME || 'daily-quotas',
+  tokenBudget: process.env.BUDGETS_TABLE_NAME || 'token-budgets',
+  conversationContext:
+    process.env.CONVERSATION_CONTEXT_TABLE_NAME || 'conversation-contexts',
 };
 
 // ============================================================================
@@ -69,10 +70,14 @@ const telegramClient = getTelegramClient({
 
 // Services composed with injected dependencies
 const counterServices = composeCounterServices(dynamoClient);
-const conversationServices = composeConversationServices(dynamoClient, {
-  tableName: tables.conversationContext,
-  maxMessages: 6,
-});
+const conversationServices = composeConversationServices(
+  dynamoClient,
+  {
+    tableName: tables.conversationContext,
+    maxMessages: 6,
+  },
+  logger
+);
 const sendTelegramResponse = sendTelegramResponseService(
   telegramClient,
   logger
@@ -138,8 +143,7 @@ const createTelegramResponseSender = (message: TelegramMessage) => {
  * Exported for unit testing in isolation from middleware chain.
  */
 export const baseHandler = async (event: TelegramWebhookEvent) => {
-  // Debug: log the full event structure
-  logger.debug('Event received:', JSON.stringify(event, null, 2));
+  logger.debug('Event received', { event });
 
   const message = event.message || event.edited_message;
 
