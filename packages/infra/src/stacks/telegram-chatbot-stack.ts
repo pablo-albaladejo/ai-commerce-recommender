@@ -132,6 +132,7 @@ export class TelegramChatbotStack extends Stack {
         minify: true,
         sourceMap: true,
         externalModules: ['@aws-sdk/*'], // AWS SDK v3 is available in Lambda runtime
+        forceDockerBundling: false, // Use local esbuild instead of Docker (required for CI)
       },
     });
     func.addToRolePolicy(
