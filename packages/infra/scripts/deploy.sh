@@ -33,6 +33,7 @@ done
 
 # Default values
 TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+TELEGRAM_SECRET_TOKEN=${TELEGRAM_SECRET_TOKEN:-}
 AWS_REGION=${AWS_REGION:-eu-west-1}
 AWS_ACCOUNT=${AWS_ACCOUNT:-}
 
@@ -86,6 +87,9 @@ CDK_CONTEXT=""
 if [ ! -z "$TELEGRAM_BOT_TOKEN" ]; then
     CDK_CONTEXT="$CDK_CONTEXT -c telegramBotToken=$TELEGRAM_BOT_TOKEN"
 fi
+if [ ! -z "$TELEGRAM_SECRET_TOKEN" ]; then
+    CDK_CONTEXT="$CDK_CONTEXT -c telegramSecretToken=$TELEGRAM_SECRET_TOKEN"
+fi
 
 CDK_CONTEXT="$CDK_CONTEXT -c environment=$ENVIRONMENT"
 CDK_CONTEXT="$CDK_CONTEXT -c region=$AWS_REGION"
@@ -126,10 +130,24 @@ if [ "$WEBHOOK_URL" != "Not available" ]; then
     
     if [ ! -z "$TELEGRAM_BOT_TOKEN" ]; then
         echo -e "${YELLOW}🤖 Setting Telegram webhook...${NC}"
-        curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+        
+        # Build webhook payload with optional secret token
+        WEBHOOK_PAYLOAD="{\"url\":\"${WEBHOOK_URL}\""
+        if [ ! -z "$TELEGRAM_SECRET_TOKEN" ]; then
+            WEBHOOK_PAYLOAD="${WEBHOOK_PAYLOAD},\"secret_token\":\"${TELEGRAM_SECRET_TOKEN}\""
+            echo -e "${BLUE}🔐 Including secret token for webhook authentication${NC}"
+        fi
+        WEBHOOK_PAYLOAD="${WEBHOOK_PAYLOAD}}"
+        
+        WEBHOOK_RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
             -H "Content-Type: application/json" \
-            -d "{\"url\":\"${WEBHOOK_URL}\"}" || true
-        echo -e "${GREEN}✅ Telegram webhook configured${NC}"
+            -d "$WEBHOOK_PAYLOAD" 2>&1) || true
+        
+        if echo "$WEBHOOK_RESPONSE" | grep -q '"ok":true'; then
+            echo -e "${GREEN}✅ Telegram webhook configured${NC}"
+        else
+            echo -e "${RED}❌ Webhook configuration failed: ${WEBHOOK_RESPONSE}${NC}"
+        fi
     fi
 else
     echo -e "${RED}❌ Could not retrieve webhook URL${NC}"

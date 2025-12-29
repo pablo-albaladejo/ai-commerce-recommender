@@ -2,14 +2,22 @@
 // Domain Errors - Abuse Protection
 // ============================================================================
 
+export type RateLimitInfo = {
+  retryAfter?: number;
+  limit: number;
+  remaining: number;
+};
+
+export type QuotaErrorInfo = {
+  limit: number;
+  used: number;
+  resetTime: string;
+};
+
 export class RateLimitError extends Error {
   constructor(
     message: string,
-    public readonly info: {
-      retryAfter?: number;
-      limit: number;
-      remaining: number;
-    }
+    public readonly info: RateLimitInfo
   ) {
     super(message);
     this.name = 'RateLimitError';
@@ -20,11 +28,7 @@ export class RateLimitError extends Error {
 export class DailyQuotaError extends Error {
   constructor(
     message: string,
-    public readonly info: {
-      limit: number;
-      used: number;
-      resetTime: string;
-    }
+    public readonly info: QuotaErrorInfo
   ) {
     super(message);
     this.name = 'DailyQuotaError';
@@ -35,11 +39,7 @@ export class DailyQuotaError extends Error {
 export class TokenBudgetError extends Error {
   constructor(
     message: string,
-    public readonly info: {
-      limit: number;
-      used: number;
-      resetTime: string;
-    }
+    public readonly info: QuotaErrorInfo
   ) {
     super(message);
     this.name = 'TokenBudgetError';

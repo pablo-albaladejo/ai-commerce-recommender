@@ -22,6 +22,7 @@ import {
 export type TelegramChatbotStackProps = StackProps & {
   environment: string;
   telegramBotToken?: string;
+  telegramSecretToken?: string;
   catalogBucket?: string;
   catalogPrefix?: string;
   bedrockModels?: { embedModel?: string; chatModel?: string };
@@ -31,6 +32,7 @@ type LambdaConfig = Pick<
   TelegramChatbotStackProps,
   | 'environment'
   | 'telegramBotToken'
+  | 'telegramSecretToken'
   | 'catalogBucket'
   | 'catalogPrefix'
   | 'bedrockModels'
@@ -49,6 +51,7 @@ export class TelegramChatbotStack extends Stack {
     const {
       environment,
       telegramBotToken,
+      telegramSecretToken,
       catalogBucket,
       catalogPrefix,
       bedrockModels,
@@ -82,6 +85,7 @@ export class TelegramChatbotStack extends Stack {
     this.telegramWebhookFunction = this.createLambdaFunction({
       environment,
       telegramBotToken,
+      telegramSecretToken,
       catalogBucket,
       catalogPrefix,
       bedrockModels,
@@ -160,6 +164,9 @@ export class TelegramChatbotStack extends Stack {
       CONVERSATION_CONTEXT_TABLE_NAME: this.conversationContextTable.tableName,
       ...(config.telegramBotToken && {
         TELEGRAM_BOT_TOKEN: config.telegramBotToken,
+      }),
+      ...(config.telegramSecretToken && {
+        TELEGRAM_SECRET_TOKEN: config.telegramSecretToken,
       }),
       ...(config.catalogBucket && { CATALOG_BUCKET: config.catalogBucket }),
       ...(config.catalogPrefix && { CATALOG_PREFIX: config.catalogPrefix }),

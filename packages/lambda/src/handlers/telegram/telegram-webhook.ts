@@ -160,7 +160,7 @@ export const handler = middy(baseHandler)
   .use(tracingMiddleware({ component: 'telegram-webhook', logger, metrics }))
   .use(httpJsonBodyParser())
   .use(parser({ schema: TelegramUpdateSchema, envelope: ApiGatewayV2Envelope }))
-  .use(signatureValidation({ required: false }))
+  .use(signatureValidation({ required: process.env.ENVIRONMENT === 'prod' }))
   .use(
     abuseProtection({
       rateLimit: {

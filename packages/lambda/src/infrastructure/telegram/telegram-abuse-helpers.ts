@@ -2,6 +2,9 @@
  * Telegram-specific helpers for middleware composition
  */
 
+import type { Logger } from '@aws-lambda-powertools/logger';
+import type { Metrics } from '@aws-lambda-powertools/metrics';
+
 import type {
   AddConversationMessage,
   GetConversationContext,
@@ -190,9 +193,6 @@ export const createTelegramContextManager = (
 // ============================================================================
 // Error Handler Factory
 // ============================================================================
-
-import type { Logger } from '@aws-lambda-powertools/logger';
-import type { Metrics } from '@aws-lambda-powertools/metrics';
 
 export type Powertools = {
   logger: Logger;

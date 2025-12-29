@@ -5,44 +5,7 @@ import {
   Metric,
   TreatMissingData,
 } from 'aws-cdk-lib/aws-cloudwatch';
-import {
-  AttributeType,
-  BillingMode,
-  ProjectionType,
-  Table,
-} from 'aws-cdk-lib/aws-dynamodb';
-
-type TableConfig = {
-  pk: string;
-  sk: string;
-  gsiPk: string;
-  gsiSk: string;
-  gsiName: string;
-  removalPolicy?: RemovalPolicy;
-};
-
-export const createTable = (
-  stack: Stack,
-  id: string,
-  name: string,
-  config: TableConfig
-): Table => {
-  const table = new Table(stack, id, {
-    tableName: name,
-    partitionKey: { name: config.pk, type: AttributeType.STRING },
-    sortKey: { name: config.sk, type: AttributeType.STRING },
-    billingMode: BillingMode.PAY_PER_REQUEST,
-    timeToLiveAttribute: 'ttl',
-    removalPolicy: config.removalPolicy ?? RemovalPolicy.DESTROY,
-  });
-  table.addGlobalSecondaryIndex({
-    indexName: config.gsiName,
-    partitionKey: { name: config.gsiPk, type: AttributeType.STRING },
-    sortKey: { name: config.gsiSk, type: AttributeType.STRING },
-    projectionType: ProjectionType.ALL,
-  });
-  return table;
-};
+import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
 
 type SimpleTableConfig = {
   pk: string;
