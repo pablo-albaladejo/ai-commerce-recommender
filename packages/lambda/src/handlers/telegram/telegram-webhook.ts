@@ -2,16 +2,18 @@ import { ApiGatewayV2Envelope } from '@aws-lambda-powertools/parser/envelopes';
 import { parser } from '@aws-lambda-powertools/parser/middleware';
 import middy from '@middy/core';
 import httpJsonBodyParser from '@middy/http-json-body-parser';
-import { processTelegramMessage } from '../../application/use-cases/process-telegram-message';
+import type { ChatResponse } from '../../application/services/send-chat-response';
+import { processChatMessage } from '../../application/use-cases/process-chat-message';
 import { defaultPowertools } from '../../infrastructure/config/powertools-factory';
 import { getDynamoDBClient } from '../../infrastructure/database/dynamodb-client';
 import { composeConversationServices } from '../../infrastructure/services/compose-conversation-services';
 import { composeCounterServices } from '../../infrastructure/services/compose-counter-services';
+import { sendTelegramResponseService } from '../../infrastructure/services/send-telegram-response-service';
 import {
   getSecretToken,
   validateSignature,
 } from '../../infrastructure/services/signature-validation-service';
-import { defaultTelegramClient } from '../../infrastructure/telegram/telegram-client';
+import { getTelegramClient } from '../../infrastructure/shared/telegram-client';
 import {
   TelegramMessage,
   TelegramUpdate,
@@ -59,11 +61,19 @@ const tables = {
 const dynamoClient = getDynamoDBClient();
 const { logger, metrics } = defaultPowertools;
 
+// Telegram client singleton (config from environment)
+const telegramClient = getTelegramClient({
+  botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+  logger,
+});
+
+// Services composed with injected dependencies
 const counterServices = composeCounterServices(dynamoClient);
 const conversationServices = composeConversationServices(dynamoClient, {
   tableName: tables.conversationContext,
   maxMessages: 6,
 });
+const sendTelegramResponse = sendTelegramResponseService(telegramClient);
 
 // ============================================================================
 // Middleware Composition
@@ -101,27 +111,17 @@ const errorHandler = errorHandlerMiddleware({
 // Response Helpers
 // ============================================================================
 
-const buildDefaultResponse = (
-  firstName: string | undefined,
-  text: string
-): string =>
-  `👋 ¡Hola ${firstName || 'usuario'}!\n\nRecibí tu mensaje: "${text}"\n\n🤖 El bot está funcionando correctamente.`;
-
-const sendResponseToTelegram = async (
-  message: TelegramMessage,
-  result: Awaited<ReturnType<typeof processTelegramMessage>>
-): Promise<void> => {
-  if (!result.success) return;
-
-  const responseText =
-    result.response?.text ||
-    buildDefaultResponse(message.from?.first_name, message.text || '');
-
-  await defaultTelegramClient.sendMessage({
-    chatId: message.chat.id,
-    text: responseText,
-    replyToMessageId: message.message_id,
-  });
+/**
+ * Creates a sendResponse function bound to a specific Telegram message context.
+ * This function is injected into the use-case to keep it platform-agnostic.
+ */
+const createTelegramResponseSender = (message: TelegramMessage) => {
+  return async (response: ChatResponse): Promise<void> => {
+    await sendTelegramResponse(response, {
+      chatId: message.chat.id,
+      replyToMessageId: message.message_id,
+    });
+  };
 };
 
 // ============================================================================
@@ -142,15 +142,18 @@ export const baseHandler = async (event: TelegramWebhookEvent) => {
     return httpResponse(200, { success: true, message: 'Update acknowledged' });
   }
 
-  const result = await processTelegramMessage({
+  // Compose the use-case with Telegram-specific response sender
+  const sendResponse = createTelegramResponseSender(message);
+  const useCase = processChatMessage(sendResponse);
+
+  // Execute with event data
+  const result = await useCase({
     userId: message.from?.id ?? 0,
     chatId: message.chat.id,
     messageId: message.message_id,
     messageText: message.text,
     traceId: event.context?.trace?.traceId,
   });
-
-  await sendResponseToTelegram(message, result);
 
   return httpResponse(200, result);
 };

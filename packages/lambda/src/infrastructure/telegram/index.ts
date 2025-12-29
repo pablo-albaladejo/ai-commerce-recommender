@@ -10,14 +10,14 @@ export {
   type TelegramChat,
 } from './telegram-schemas';
 
-// Client
+// Client (re-exported from shared)
 export {
-  createTelegramClient,
-  defaultTelegramClient,
+  getTelegramClient,
+  resetTelegramClient,
   type TelegramClient,
   type SendMessageParams,
-  type TelegramClientConfig,
-} from './telegram-client';
+  type GetTelegramClientParams,
+} from '../shared/telegram-client';
 
 // Utilities
 export {

@@ -1,4 +1,3 @@
-import { defaultTelegramClient } from '../../infrastructure/telegram/telegram-client';
 import {
   TelegramChatBuilder,
   TelegramMessageBuilder,
@@ -6,20 +5,33 @@ import {
   TelegramUserBuilder,
 } from '../../tests/fixtures/telegram-message.builder';
 
-// Mock Telegram client
-jest.mock('../../infrastructure/telegram/telegram-client', () => ({
-  defaultTelegramClient: {
-    sendMessage: jest.fn().mockResolvedValue(true),
-  },
+// Mock Telegram client singleton
+const mockSendMessage = jest.fn().mockResolvedValue(true);
+jest.mock('../../infrastructure/shared/telegram-client', () => ({
+  getTelegramClient: () => ({
+    sendMessage: mockSendMessage,
+  }),
 }));
 
-const mockProcessTelegramMessage = jest.fn();
-jest.mock('../../application/use-cases/process-telegram-message', () => ({
-  processTelegramMessage: (...args: unknown[]) =>
-    mockProcessTelegramMessage(...args),
+// Mock the curried use-case: processChatMessage(deps) => (input) => result
+const mockUseCaseExecutor = jest.fn();
+jest.mock('../../application/use-cases/process-chat-message', () => ({
+  processChatMessage: jest.fn(
+    (_sendResponse: SendResponseFn): ProcessChatMessage => mockUseCaseExecutor
+  ),
 }));
 
+// Import after mocks are set up (inline type imports to avoid duplicate-imports error)
+import {
+  processChatMessage,
+  type ProcessChatMessage,
+  type SendResponseFn,
+} from '../../application/use-cases/process-chat-message';
 import { baseHandler, type TelegramWebhookEvent } from './telegram-webhook';
+
+const mockProcessChatMessage = processChatMessage as jest.MockedFunction<
+  typeof processChatMessage
+>;
 
 // After parser middleware, the event IS the TelegramUpdate directly
 const createEvent = (update: Record<string, unknown>): TelegramWebhookEvent =>
@@ -28,10 +40,14 @@ const createEvent = (update: Record<string, unknown>): TelegramWebhookEvent =>
 describe('Telegram Webhook Handler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockProcessTelegramMessage.mockResolvedValue({ success: true });
+    // Reset the mock implementation to default behavior
+    mockProcessChatMessage.mockImplementation(
+      (_sendResponse: SendResponseFn): ProcessChatMessage => mockUseCaseExecutor
+    );
+    mockUseCaseExecutor.mockResolvedValue({ success: true });
   });
 
-  it('processes text message and calls processTelegramMessage', async () => {
+  it('composes use-case with sendResponse and executes with event data', async () => {
     const user = TelegramUserBuilder.build();
     const chat = TelegramChatBuilder.build();
     const message = TelegramMessageBuilder.build({ from: user, chat });
@@ -41,7 +57,12 @@ describe('Telegram Webhook Handler', () => {
     );
 
     expect(response.statusCode).toBe(200);
-    expect(mockProcessTelegramMessage).toHaveBeenCalledWith({
+
+    // Verify composition: processChatMessage was called with sendResponse function
+    expect(mockProcessChatMessage).toHaveBeenCalledWith(expect.any(Function));
+
+    // Verify execution: the composed use-case was called with event data
+    expect(mockUseCaseExecutor).toHaveBeenCalledWith({
       userId: user.id,
       chatId: chat.id,
       messageId: message.message_id,
@@ -50,18 +71,29 @@ describe('Telegram Webhook Handler', () => {
     });
   });
 
-  it('sends response to Telegram when processTelegramMessage succeeds', async () => {
+  it('injects sendResponse that calls Telegram client via service', async () => {
     const message = TelegramMessageBuilder.build();
-    mockProcessTelegramMessage.mockResolvedValue({
-      success: true,
-      response: { text: 'Bot response' },
-    });
+
+    // Capture the sendResponse function during composition
+    mockProcessChatMessage.mockImplementation(
+      (sendResponse: SendResponseFn): ProcessChatMessage =>
+        async () => {
+          await sendResponse({ text: 'Test response' });
+          return {
+            success: true,
+            processed: { userId: 1, chatId: 1, messageLength: 1 },
+            timestamp: new Date().toISOString(),
+          };
+        }
+    );
 
     await baseHandler(createEvent(TelegramUpdateBuilder.build({ message })));
 
-    expect(defaultTelegramClient.sendMessage).toHaveBeenCalledWith({
+    // The service should have called the Telegram client
+    expect(mockSendMessage).toHaveBeenCalledWith({
       chatId: message.chat.id,
-      text: 'Bot response',
+      text: 'Test response',
+      parseMode: undefined,
       replyToMessageId: message.message_id,
     });
   });
@@ -74,7 +106,7 @@ describe('Telegram Webhook Handler', () => {
     );
 
     expect(response.statusCode).toBe(200);
-    expect(mockProcessTelegramMessage).not.toHaveBeenCalled();
+    expect(mockProcessChatMessage).not.toHaveBeenCalled();
     expect(JSON.parse(response.body).message).toBe('Update acknowledged');
   });
 
@@ -85,7 +117,7 @@ describe('Telegram Webhook Handler', () => {
       createEvent({ update_id: 1, edited_message: editedMessage })
     );
 
-    expect(mockProcessTelegramMessage).toHaveBeenCalledWith(
+    expect(mockUseCaseExecutor).toHaveBeenCalledWith(
       expect.objectContaining({ messageText: editedMessage.text })
     );
   });
@@ -105,14 +137,14 @@ describe('Telegram Webhook Handler', () => {
 
     await baseHandler(createEvent(update));
 
-    expect(mockProcessTelegramMessage).toHaveBeenCalledWith(
+    expect(mockUseCaseExecutor).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 0 })
     );
   });
 
-  it('propagates errors from processTelegramMessage', async () => {
+  it('propagates errors from use-case execution', async () => {
     const message = TelegramMessageBuilder.build();
-    mockProcessTelegramMessage.mockRejectedValue(new Error('Failed'));
+    mockUseCaseExecutor.mockRejectedValue(new Error('Failed'));
 
     await expect(
       baseHandler(createEvent(TelegramUpdateBuilder.build({ message })))
