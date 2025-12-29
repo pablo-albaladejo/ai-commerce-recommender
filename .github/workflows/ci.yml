@@ -42,3 +42,6 @@ jobs:
 
       - name: Test
         run: pnpm test
+        env:
+          # Disable Docker bundling for CDK tests - use local esbuild instead
+          CDK_DOCKER: disabled
