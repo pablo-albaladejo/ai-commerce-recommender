@@ -43,6 +43,19 @@ export const getUserIdFromUpdate = (event: unknown): number | undefined => {
   return parsed.message?.from?.id || parsed.edited_message?.from?.id;
 };
 
+/**
+ * Extract language code from parsed TelegramUpdate.
+ * Used for i18n middleware configuration.
+ */
+export const getLocaleFromUpdate = (event: unknown): string | undefined => {
+  const parsed = parseTelegramUpdate(event);
+  if (!parsed) return undefined;
+  return (
+    parsed.message?.from?.language_code ||
+    parsed.edited_message?.from?.language_code
+  );
+};
+
 // ============================================================================
 // Legacy Event Extractors (for raw API Gateway events with body)
 // ============================================================================
