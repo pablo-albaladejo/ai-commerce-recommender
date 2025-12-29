@@ -9,20 +9,19 @@ import { getDynamoDBClient } from '../../infrastructure/database/dynamodb-client
 import { composeConversationServices } from '../../infrastructure/services/compose-conversation-services';
 import { composeCounterServices } from '../../infrastructure/services/compose-counter-services';
 import { sendTelegramResponseService } from '../../infrastructure/services/send-telegram-response-service';
-import {
-  getSecretToken,
-  validateSignature,
-} from '../../infrastructure/services/signature-validation-service';
+import * as signatureService from '../../infrastructure/services/signature-validation-service';
 import { getTelegramClient } from '../../infrastructure/shared/telegram-client';
+import {
+  createErrorHandlerDeps,
+  createTelegramAbuseProtection,
+  createTelegramContextManager,
+  createTelegramSignatureValidation,
+} from '../../infrastructure/telegram/telegram-abuse-helpers';
 import {
   TelegramMessage,
   TelegramUpdate,
   TelegramUpdateSchema,
 } from '../../infrastructure/telegram/telegram-schemas';
-import {
-  getChatIdFromUpdate,
-  getUserIdFromUpdate,
-} from '../../infrastructure/telegram/telegram-utils';
 import { abuseProtectionMiddleware } from '../../middleware/abuse-protection/abuse-protection';
 import { contextManagerMiddleware } from '../../middleware/context/context-manager';
 import { errorHandlerMiddleware } from '../../middleware/observability/error-handler';
@@ -87,35 +86,21 @@ const sendTelegramResponse = sendTelegramResponseService(
 // Middleware Composition
 // ============================================================================
 
-const abuseProtection = abuseProtectionMiddleware({
-  checkRateLimit: counterServices.checkRateLimit,
-  checkDailyQuota: counterServices.checkDailyCounter,
-  recordTokenUsage: counterServices.recordTokenUsage,
-  extractChatId: getChatIdFromUpdate,
-  extractUserId: getUserIdFromUpdate,
-});
+const abuseProtection = abuseProtectionMiddleware(
+  createTelegramAbuseProtection(telegramClient, counterServices)
+);
 
-const signatureValidation = signatureValidationMiddleware({
-  getSecretToken,
-  validateSignature,
-});
+const signatureValidation = signatureValidationMiddleware(
+  createTelegramSignatureValidation(signatureService)
+);
 
-const contextManager = contextManagerMiddleware({
-  getContext: conversationServices.getContext,
-  addMessage: conversationServices.addMessage,
-  extractUserId: getUserIdFromUpdate,
-  extractChatId: event => {
-    const chatId = getChatIdFromUpdate(event);
-    if (!chatId) return undefined;
-    const parsed = parseInt(chatId, 10);
-    return Number.isNaN(parsed) ? undefined : parsed;
-  },
-});
+const contextManager = contextManagerMiddleware(
+  createTelegramContextManager(conversationServices)
+);
 
-const errorHandler = errorHandlerMiddleware({
-  logger,
-  metrics,
-});
+const errorHandler = errorHandlerMiddleware(
+  createErrorHandlerDeps({ logger, metrics })
+);
 
 // ============================================================================
 // Response Helpers
@@ -180,7 +165,7 @@ export const handler = middy(baseHandler)
     abuseProtection({
       rateLimit: {
         tableName: tables.rateLimit,
-        maxRequests: 6,
+        maxRequests: 2,
         windowSeconds: 60,
       },
       dailyQuota: {

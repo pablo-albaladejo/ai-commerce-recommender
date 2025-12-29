@@ -5,6 +5,7 @@ import type {
 } from '../../application/services/counter-service';
 import type { CounterResult } from '../../domain/counter';
 import { TokenBudgetError } from '../../domain/errors';
+import { httpResponse } from '../../shared/http-response';
 
 type TokenBudgetConfig = {
   tableName: string;
@@ -12,10 +13,49 @@ type TokenBudgetConfig = {
   estimatedTokensPerRequest?: number;
 };
 
+export type OnTokenBudgetExceeded = (
+  userId: number,
+  info: { limit: number; used: number; resetTime: string }
+) => Promise<void>;
+
 type TokenBudgetDependencies = {
   checkDailyQuota: CheckDailyCounter;
   recordTokenUsage: RecordTokenUsage;
   extractUserId: (event: unknown) => number | undefined;
+  onBudgetExceeded?: OnTokenBudgetExceeded;
+};
+
+type TokenBudgetInfo = CounterResult & { userId: number; tableName: string };
+type TokenUsage = { inputTokens: number; outputTokens: number };
+
+const getContextData = (ctx: Record<string, unknown>) => ({
+  info: ctx.tokenBudgetInfo as TokenBudgetInfo | undefined,
+  usage: ctx.actualTokenUsage as TokenUsage | undefined,
+});
+
+const handleBudgetExceeded = async (
+  userId: number,
+  result: CounterResult,
+  onBudgetExceeded?: OnTokenBudgetExceeded
+) => {
+  const errorInfo = {
+    limit: result.limit,
+    used: result.current,
+    resetTime: String(result.resetTime),
+  };
+
+  if (onBudgetExceeded) {
+    await onBudgetExceeded(userId, errorInfo);
+    return httpResponse(200, {
+      success: true,
+      message: 'Token budget notification sent',
+    });
+  }
+
+  throw new TokenBudgetError(
+    'Daily token budget exceeded, please try again tomorrow',
+    errorInfo
+  );
 };
 
 export const tokenBudgetMiddleware =
@@ -38,46 +78,32 @@ export const tokenBudgetMiddleware =
           estimatedTokensPerRequest
         );
 
-        (
-          request.context as unknown as Record<string, unknown>
-        ).tokenBudgetInfo = {
-          ...result,
-          userId,
-          tableName,
-        };
+        const ctx = request.context as unknown as Record<string, unknown>;
+        ctx.tokenBudgetInfo = { ...result, userId, tableName };
 
         if (!result.allowed) {
-          throw new TokenBudgetError(
-            'Daily token budget exceeded, please try again tomorrow',
-            {
-              limit: result.limit,
-              used: result.current,
-              resetTime: String(result.resetTime),
-            }
+          request.response = await handleBudgetExceeded(
+            userId,
+            result,
+            deps.onBudgetExceeded
           );
+          return request.response;
         }
       },
 
       after: async request => {
         const ctx = request.context as unknown as Record<string, unknown>;
-        const info = ctx.tokenBudgetInfo as
-          | (CounterResult & { userId: number; tableName: string })
-          | undefined;
-        const actualUsage = ctx.actualTokenUsage as
-          | { inputTokens: number; outputTokens: number }
-          | undefined;
+        const { info, usage } = getContextData(ctx);
 
-        // Record actual token usage if available
-        if (actualUsage && info?.userId) {
+        if (usage && info?.userId) {
           await deps.recordTokenUsage({
             userId: info.userId,
             tableName: info.tableName,
-            inputTokens: actualUsage.inputTokens,
-            outputTokens: actualUsage.outputTokens,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
           });
         }
 
-        // Add response headers
         if (info && request.response?.headers) {
           request.response.headers['X-TokenBudget-Limit'] = String(info.limit);
           request.response.headers['X-TokenBudget-Remaining'] = String(
