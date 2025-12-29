@@ -23,9 +23,94 @@ alwaysApply: false
 - Filters don't drop all results unexpectedly
 - Edge cases: empty results, all filtered out
 
-## Test Fixtures
+## Test Fixtures and Mock Data
 
-Use small fixture catalog in `examples/generic-json/` for tests:
+### Mock Builders with Rosie and Faker
+
+- **All mocks must be created using builders in a `fixtures/` folder**
+- **Use Rosie for building test objects based on Zod schemas**
+- **Use Faker for generating realistic fake data**
+- **Builders must be type-safe and derive from Zod schemas**
+
+### Fixture Structure
+
+```
+packages/
+├── core/
+│   └── src/
+│       └── fixtures/
+│           ├── product.builder.ts
+│           ├── catalog.builder.ts
+│           └── index.ts
+├── lambda/
+│   └── src/
+│       └── fixtures/
+│           ├── telegram-message.builder.ts
+│           ├── api-event.builder.ts
+│           └── index.ts
+```
+
+### Builder Implementation Pattern
+
+```typescript
+import { Factory } from "rosie";
+import { faker } from "@faker-js/faker";
+import { z } from "zod";
+import { ProductSchema } from "../lib/types";
+
+type Product = z.infer<typeof ProductSchema>;
+
+export const ProductBuilder = Factory.define<Product>("Product")
+  .attr("id", () => faker.number.int({ min: 1, max: 999999 }))
+  .attr("title", () => faker.commerce.productName())
+  .attr("url", () => faker.internet.url())
+  .attr("vendor", () => faker.company.name())
+  .attr("product_type", () => faker.commerce.department())
+  .attr("tags", () => faker.helpers.arrayElements([
+    faker.commerce.productAdjective(),
+    faker.commerce.productMaterial(),
+  ]))
+  .attr("available", () => faker.datatype.boolean())
+  .attr("price_min", () => faker.number.float({ min: 10, max: 500, fractionDigits: 2 }))
+  .attr("price_max", function() { return this.price_min + faker.number.float({ min: 0, max: 200, fractionDigits: 2 }); })
+  .attr("images", () => [{ src: faker.image.url() }])
+  .attr("description_text", () => faker.commerce.productDescription())
+  .attr("doc_text", function() { return `${this.title} ${this.description_text} ${this.tags.join(" ")}`; });
+```
+
+### Usage in Tests
+
+```typescript
+import { ProductBuilder } from "../fixtures";
+
+describe("Product Processing", () => {
+  test("processes valid product", () => {
+    const product = ProductBuilder.build();
+    
+    // Validate against Zod schema
+    const result = ProductSchema.safeParse(product);
+    expect(result.success).toBe(true);
+    
+    // Test business logic
+    const processed = processProduct(product);
+    expect(processed).toBeDefined();
+  });
+
+  test("handles specific product attributes", () => {
+    const expensiveProduct = ProductBuilder.build({
+      price_min: 1000,
+      price_max: 2000,
+      product_type: "luxury"
+    });
+    
+    expect(expensiveProduct.price_min).toBe(1000);
+  });
+});
+```
+
+### Static Test Fixtures
+
+Use small fixture catalog in `examples/generic-json/` for integration tests:
 - Predictable product data
 - Covers edge cases
 - Fast to load
@@ -38,11 +123,17 @@ Use small fixture catalog in `examples/generic-json/` for tests:
 
 2. **Deterministic tests**
    - Same input = same output
-   - No random behavior in tests
+   - No random behavior in tests (use Faker with seeds for reproducible tests)
 
-3. **Test files location**
+3. **Use builders for all test data**
+   - Never create test objects manually
+   - Always use Rosie builders based on Zod schemas
+   - Validate all test data against schemas
+
+4. **Test files location**
    - Co-locate tests with source: `*.test.ts` next to `*.ts`
    - Or use `__tests__/` directories
+   - Fixtures in dedicated `fixtures/` folders
 
 ## Commands
 ```bash
@@ -50,3 +141,39 @@ pnpm test                              # Run all tests
 pnpm --filter @ai-commerce/core test   # Test only core package
 pnpm --filter @ai-commerce/lambda test # Test only lambda package
 ```
+
+## Required Dependencies
+
+Add these testing dependencies to your package.json:
+
+```json
+{
+  "devDependencies": {
+    "rosie": "^2.1.0",
+    "@faker-js/faker": "^8.0.0",
+    "@types/rosie": "^0.0.45"
+  }
+}
+```
+
+## Builder Guidelines
+
+### Type Safety
+- All builders must be typed with `z.infer<typeof Schema>`
+- Validate builder output against Zod schemas in tests
+- Use TypeScript strict mode for builder files
+
+### Realistic Data
+- Use Faker for generating realistic fake data
+- Ensure generated data passes Zod validation
+- Use appropriate Faker methods for each field type
+
+### Reusability
+- Create builders for all major domain objects
+- Support partial overrides for specific test scenarios
+- Export builders from fixtures/index.ts for easy importing
+
+### Performance
+- Keep builders lightweight and fast
+- Avoid expensive operations in builder definitions
+- Cache complex generated data when appropriate

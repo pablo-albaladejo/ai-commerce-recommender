@@ -5,8 +5,11 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "test": "jest",
-    "lint": "eslint . --ext .ts",
+    "test": "jest --passWithNoTests",
+    "lint": "eslint . --ext .ts --fix",
+    "lint:check": "eslint . --ext .ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "clean": "rm -rf dist",
     "build:index": "node dist/build-index.js",
     "upload:artifacts": "node dist/upload-artifacts.js",
@@ -14,16 +17,14 @@
   },
   "dependencies": {
     "@ai-commerce/core": "workspace:*",
-    "@aws-sdk/client-s3": "^3.400.0",
-    "@aws-sdk/client-bedrock-runtime": "^3.400.0",
+    "@aws-sdk/client-s3": "^3.958.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.958.0",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
+    "@types/node": "^24.0.0",
     "@types/xml2js": "^0.4.14",
     "typescript": "^5.0.0"
   },
-  "files": [
-    "dist"
-  ]
+  "files": ["dist"]
 }

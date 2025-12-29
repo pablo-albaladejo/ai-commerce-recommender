@@ -40,6 +40,7 @@ pnpm download:shopify-sitemap https://example.com/sitemap_products.xml ./data
 ## 📋 Available Scripts
 
 ### Global Commands
+
 - `pnpm build` - Build all packages
 - `pnpm test` - Run tests in all packages
 - `pnpm lint` - Lint all packages
@@ -47,17 +48,20 @@ pnpm download:shopify-sitemap https://example.com/sitemap_products.xml ./data
 - `pnpm clean` - Clean all build artifacts
 
 ### Infrastructure
+
 - `pnpm cdk:deploy` - Deploy AWS infrastructure
 - `pnpm cdk:diff` - Show infrastructure changes
 - `pnpm cdk:destroy` - Destroy AWS infrastructure
 
 ### Data Pipeline
+
 - `pnpm index:build` - Build search artifacts locally
 - `pnpm index:upload` - Upload artifacts to S3
 - `pnpm index:run` - Build and upload artifacts
 - `pnpm download:shopify-sitemap <url> <dir>` - Download products from Shopify sitemap
 
 ### Package-Specific Commands
+
 ```bash
 # Build only core package
 pnpm --filter @ai-commerce/core build
@@ -88,17 +92,20 @@ pnpm --filter @ai-commerce/scripts download:shopify-sitemap <url> <dir>
 ## 🔧 Development
 
 ### Adding New Packages
+
 1. Create package directory under `packages/`
 2. Add `package.json` with scoped name `@ai-commerce/*`
 3. Add TypeScript configuration extending root config
 4. Update workspace dependencies as needed
 
 ### Cross-Package Dependencies
+
 - Use `workspace:*` for internal dependencies
 - Import shared logic from `@ai-commerce/core`
 - Avoid circular dependencies
 
 ### Testing
+
 - Unit tests for core business logic
 - Integration tests for Lambda handlers
 - Property-based tests for algorithms
@@ -112,7 +119,8 @@ pnpm --filter @ai-commerce/scripts download:shopify-sitemap <url> <dir>
 
 ## 🤖 Agent Guidelines
 
-This project includes comprehensive steering files for AI agents. See [AGENTS.md](./AGENTS.md) for detailed guidelines on:
+This project includes comprehensive steering files for AI agents. See [AGENTS.md](./AGENTS.md) for
+detailed guidelines on:
 
 - Architecture principles
 - Development workflows

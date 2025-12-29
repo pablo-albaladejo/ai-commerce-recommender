@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+
+# CDK outputs
+cdk.out/
+**/cdk.out/
+
+# Coverage reports
+coverage/
+**/coverage/
+
+# Logs
+*.log
+
+# Generated files
+*.d.ts
+!src/**/*.d.ts
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment files
+.env
+.env.*
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# AWS files
+.aws/
+
+# Git files
+.git/
+.gitignore
+
+# Husky files
+.husky/
+
+# Shell scripts
+*.sh
+
+# Cursor rules
+.cursor/
+
+# Kiro files
+.kiro/
+
+# Ignore files (not parseable)
+.eslintignore
+.prettierignore
+.nvmrc
