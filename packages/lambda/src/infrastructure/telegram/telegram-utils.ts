@@ -74,7 +74,12 @@ export const parseTelegramBody = (
   event: TelegramEvent
 ): TelegramBody | null => {
   if (!event.body) return null;
-  return typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+  if (typeof event.body !== 'string') return event.body;
+  try {
+    return JSON.parse(event.body);
+  } catch {
+    return null;
+  }
 };
 
 export const extractUserId = (event: TelegramEvent): number => {

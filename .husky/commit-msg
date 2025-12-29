@@ -26,7 +26,8 @@ if ! grep -qE "$commit_regex" "$1"; then
 fi
 
 # Check for English-only commit messages (basic check)
-if grep -qP '[^\x00-\x7F]' "$1"; then
+# Using LC_ALL=C to detect non-ASCII characters portably (works on macOS and Linux)
+if LC_ALL=C grep -q '[^[:print:][:space:]]' "$1" 2>/dev/null || grep -q '[^[:print:][:space:]]' "$1"; then
     echo "⚠️  Warning: Commit message contains non-ASCII characters."
     echo "Please use English for commit messages as per project guidelines."
     echo ""
