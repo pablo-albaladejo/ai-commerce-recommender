@@ -17,7 +17,6 @@ import {
   createLambdaAlarm,
   createSimpleTable,
   createStackOutputs,
-  createTable,
 } from './stack-helpers';
 
 export type TelegramChatbotStackProps = StackProps & {
@@ -55,28 +54,20 @@ export class TelegramChatbotStack extends Stack {
       bedrockModels,
     } = props;
 
-    this.quotasTable = createTable(
+    this.quotasTable = createSimpleTable(
       this,
       'QuotasTable',
       `telegram-chatbot-quotas-${this.stackName}`,
       {
-        pk: 'userId',
-        sk: 'quotaType',
-        gsiPk: 'quotaType',
-        gsiSk: 'userId',
-        gsiName: 'QuotaTypeIndex',
+        pk: 'pk',
       }
     );
-    this.budgetsTable = createTable(
+    this.budgetsTable = createSimpleTable(
       this,
       'BudgetsTable',
       `telegram-chatbot-budgets-${this.stackName}`,
       {
-        pk: 'userId',
-        sk: 'budgetPeriod',
-        gsiPk: 'budgetPeriod',
-        gsiSk: 'userId',
-        gsiName: 'BudgetPeriodIndex',
+        pk: 'pk',
       }
     );
     this.conversationContextTable = createSimpleTable(

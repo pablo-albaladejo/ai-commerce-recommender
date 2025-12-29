@@ -12,8 +12,26 @@ PROJECT_ROOT="$(dirname "$(dirname "$INFRA_DIR")")"
 
 cd "$INFRA_DIR"
 
+# Load environment variables from .env if it exists
+if [ -f "$INFRA_DIR/.env" ]; then
+    echo "Loading environment variables from .env..."
+    set -a
+    source "$INFRA_DIR/.env"
+    set +a
+fi
+
+# Parse arguments
+AUTO_APPROVE=false
+ENVIRONMENT="dev"
+for arg in "$@"; do
+    if [[ "$arg" == "--yes" || "$arg" == "-y" ]]; then
+        AUTO_APPROVE=true
+    elif [[ "$arg" != -* ]]; then
+        ENVIRONMENT="$arg"
+    fi
+done
+
 # Default values
-ENVIRONMENT=${1:-dev}
 TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
 AWS_REGION=${AWS_REGION:-eu-west-1}
 AWS_ACCOUNT=${AWS_ACCOUNT:-}
@@ -77,12 +95,14 @@ CDK_CONTEXT="$CDK_CONTEXT -c account=$AWS_ACCOUNT"
 echo -e "${YELLOW}📋 Showing deployment diff...${NC}"
 npx cdk diff $CDK_CONTEXT telegram-chatbot-$ENVIRONMENT || true
 
-# Ask for confirmation
-echo -e "${YELLOW}❓ Do you want to proceed with deployment? (y/N)${NC}"
-read -r response
-if [[ ! "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    echo -e "${YELLOW}⏹️  Deployment cancelled${NC}"
-    exit 0
+# Ask for confirmation (skip if --yes flag)
+if [ "$AUTO_APPROVE" = false ]; then
+    echo -e "${YELLOW}❓ Do you want to proceed with deployment? (y/N)${NC}"
+    read -r response
+    if [[ ! "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+        echo -e "${YELLOW}⏹️  Deployment cancelled${NC}"
+        exit 0
+    fi
 fi
 
 # Deploy

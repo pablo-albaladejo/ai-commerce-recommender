@@ -14,9 +14,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "clean": "rm -rf dist cdk.out",
-    "deploy": "cdk deploy",
-    "diff": "cdk diff",
-    "destroy": "cdk destroy",
+    "deploy": "./scripts/deploy.sh --yes",
+    "deploy:quick": "source .env 2>/dev/null; cdk deploy",
+    "diff": "source .env 2>/dev/null; cdk diff",
+    "destroy": "source .env 2>/dev/null; cdk destroy",
     "synth": "cdk synth",
     "watch": "cdk watch",
     "bootstrap": "cdk bootstrap"
