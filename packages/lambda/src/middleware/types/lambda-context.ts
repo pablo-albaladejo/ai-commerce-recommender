@@ -1,5 +1,6 @@
 // Extended Lambda context types shared across middlewares
 import type { Context } from 'aws-lambda';
+import type { TranslationService } from '../../application/services/translation-service';
 
 export type TraceContext = {
   traceId: string;
@@ -56,4 +57,7 @@ export type ExtendedLambdaContext = Context & {
     inputTokens: number;
     outputTokens: number;
   };
+  // i18n context
+  translationService?: TranslationService;
+  locale?: string;
 };

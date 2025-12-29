@@ -22,8 +22,10 @@ import {
   TelegramUpdate,
   TelegramUpdateSchema,
 } from '../../infrastructure/telegram/telegram-schemas';
+import { getLocaleFromUpdate } from '../../infrastructure/telegram/telegram-utils';
 import { abuseProtectionMiddleware } from '../../middleware/abuse-protection/abuse-protection';
 import { contextManagerMiddleware } from '../../middleware/context/context-manager';
+import { i18nMiddleware } from '../../middleware/i18n/i18n-middleware';
 import { errorHandlerMiddleware } from '../../middleware/observability/error-handler';
 import { tracingMiddleware } from '../../middleware/observability/tracing';
 import { signatureValidationMiddleware } from '../../middleware/security/signature-validation';
@@ -102,6 +104,8 @@ const errorHandler = errorHandlerMiddleware(
   createErrorHandlerDeps({ logger, metrics })
 );
 
+const i18n = i18nMiddleware({ extractLocale: getLocaleFromUpdate });
+
 // ============================================================================
 // Response Helpers
 // ============================================================================
@@ -160,6 +164,7 @@ export const handler = middy(baseHandler)
   .use(tracingMiddleware({ component: 'telegram-webhook', logger, metrics }))
   .use(httpJsonBodyParser())
   .use(parser({ schema: TelegramUpdateSchema, envelope: ApiGatewayV2Envelope }))
+  .use(i18n())
   .use(signatureValidation({ required: process.env.ENVIRONMENT === 'prod' }))
   .use(
     abuseProtection({
