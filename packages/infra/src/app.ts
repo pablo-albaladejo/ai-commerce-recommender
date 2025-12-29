@@ -9,7 +9,7 @@ const environment = app.node.tryGetContext('environment') || 'dev';
 const region =
   app.node.tryGetContext('region') ||
   process.env.CDK_DEFAULT_REGION ||
-  'us-east-1';
+  'eu-west-1';
 const account =
   app.node.tryGetContext('account') || process.env.CDK_DEFAULT_ACCOUNT;
 

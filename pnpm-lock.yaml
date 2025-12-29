@@ -109,10 +109,10 @@ importers:
   packages/core:
     dependencies:
       '@aws-sdk/client-bedrock-runtime':
-        specifier: ^3.400.0
+        specifier: ^3.958.0
         version: 3.958.0
       '@aws-sdk/client-s3':
-        specifier: ^3.400.0
+        specifier: ^3.958.0
         version: 3.958.0
       zod:
         specifier: ^3.22.0
@@ -177,10 +177,10 @@ importers:
         specifier: ^2.0.0
         version: 2.30.0(@middy/core@6.4.5)
       '@aws-sdk/client-dynamodb':
-        specifier: ^3.0.0
+        specifier: ^3.958.0
         version: 3.958.0
       '@aws-sdk/lib-dynamodb':
-        specifier: ^3.0.0
+        specifier: ^3.958.0
         version: 3.958.0(@aws-sdk/client-dynamodb@3.958.0)
       '@middy/core':
         specifier: ^6.4.5
@@ -238,10 +238,10 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@aws-sdk/client-bedrock-runtime':
-        specifier: ^3.400.0
+        specifier: ^3.958.0
         version: 3.958.0
       '@aws-sdk/client-s3':
-        specifier: ^3.400.0
+        specifier: ^3.958.0
         version: 3.958.0
       xml2js:
         specifier: ^0.6.2
