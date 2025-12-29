@@ -73,7 +73,10 @@ const conversationServices = composeConversationServices(dynamoClient, {
   tableName: tables.conversationContext,
   maxMessages: 6,
 });
-const sendTelegramResponse = sendTelegramResponseService(telegramClient);
+const sendTelegramResponse = sendTelegramResponseService(
+  telegramClient,
+  logger
+);
 
 // ============================================================================
 // Middleware Composition
@@ -134,7 +137,7 @@ const createTelegramResponseSender = (message: TelegramMessage) => {
  */
 export const baseHandler = async (event: TelegramWebhookEvent) => {
   // Debug: log the full event structure
-  console.log('DEBUG event:', JSON.stringify(event, null, 2));
+  logger.debug('Event received:', JSON.stringify(event, null, 2));
 
   const message = event.message || event.edited_message;
 
