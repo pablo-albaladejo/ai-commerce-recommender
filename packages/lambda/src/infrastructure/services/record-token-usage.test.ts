@@ -73,7 +73,7 @@ describe('recordTokenUsage', () => {
     });
   });
 
-  test('silently fails on error', async () => {
+  test('bubbles up errors to error handler', async () => {
     mockGetRecord.mockRejectedValue(new Error('DB error'));
 
     const fn = recordTokenUsage(
@@ -82,7 +82,7 @@ describe('recordTokenUsage', () => {
       mockIncrementWithTokens
     );
 
-    // Should not throw
+    // Should throw to let error-handler middleware log and handle it
     await expect(
       fn({
         userId: 12345,
@@ -90,6 +90,6 @@ describe('recordTokenUsage', () => {
         inputTokens: 100,
         outputTokens: 50,
       })
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow('DB error');
   });
 });

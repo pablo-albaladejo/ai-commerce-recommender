@@ -125,4 +125,5 @@ export const getTelegramClient = (
  */
 export const resetTelegramClient = (): void => {
   telegramClient = undefined;
+  configuredBotToken = undefined;
 };

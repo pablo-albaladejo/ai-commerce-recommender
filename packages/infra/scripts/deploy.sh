@@ -12,9 +12,28 @@ PROJECT_ROOT="$(dirname "$(dirname "$INFRA_DIR")")"
 
 cd "$INFRA_DIR"
 
+# Load environment variables from .env if it exists
+if [ -f "$INFRA_DIR/.env" ]; then
+    echo "Loading environment variables from .env..."
+    set -a
+    source "$INFRA_DIR/.env"
+    set +a
+fi
+
+# Parse arguments
+AUTO_APPROVE=false
+ENVIRONMENT="dev"
+for arg in "$@"; do
+    if [[ "$arg" == "--yes" || "$arg" == "-y" ]]; then
+        AUTO_APPROVE=true
+    elif [[ "$arg" != -* ]]; then
+        ENVIRONMENT="$arg"
+    fi
+done
+
 # Default values
-ENVIRONMENT=${1:-dev}
 TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+TELEGRAM_SECRET_TOKEN=${TELEGRAM_SECRET_TOKEN:-}
 AWS_REGION=${AWS_REGION:-eu-west-1}
 AWS_ACCOUNT=${AWS_ACCOUNT:-}
 
@@ -68,6 +87,9 @@ CDK_CONTEXT=""
 if [ ! -z "$TELEGRAM_BOT_TOKEN" ]; then
     CDK_CONTEXT="$CDK_CONTEXT -c telegramBotToken=$TELEGRAM_BOT_TOKEN"
 fi
+if [ ! -z "$TELEGRAM_SECRET_TOKEN" ]; then
+    CDK_CONTEXT="$CDK_CONTEXT -c telegramSecretToken=$TELEGRAM_SECRET_TOKEN"
+fi
 
 CDK_CONTEXT="$CDK_CONTEXT -c environment=$ENVIRONMENT"
 CDK_CONTEXT="$CDK_CONTEXT -c region=$AWS_REGION"
@@ -77,12 +99,14 @@ CDK_CONTEXT="$CDK_CONTEXT -c account=$AWS_ACCOUNT"
 echo -e "${YELLOW}📋 Showing deployment diff...${NC}"
 npx cdk diff $CDK_CONTEXT telegram-chatbot-$ENVIRONMENT || true
 
-# Ask for confirmation
-echo -e "${YELLOW}❓ Do you want to proceed with deployment? (y/N)${NC}"
-read -r response
-if [[ ! "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    echo -e "${YELLOW}⏹️  Deployment cancelled${NC}"
-    exit 0
+# Ask for confirmation (skip if --yes flag)
+if [ "$AUTO_APPROVE" = false ]; then
+    echo -e "${YELLOW}❓ Do you want to proceed with deployment? (y/N)${NC}"
+    read -r response
+    if [[ ! "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+        echo -e "${YELLOW}⏹️  Deployment cancelled${NC}"
+        exit 0
+    fi
 fi
 
 # Deploy
@@ -106,10 +130,24 @@ if [ "$WEBHOOK_URL" != "Not available" ]; then
     
     if [ ! -z "$TELEGRAM_BOT_TOKEN" ]; then
         echo -e "${YELLOW}🤖 Setting Telegram webhook...${NC}"
-        curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+        
+        # Build webhook payload with optional secret token
+        WEBHOOK_PAYLOAD="{\"url\":\"${WEBHOOK_URL}\""
+        if [ ! -z "$TELEGRAM_SECRET_TOKEN" ]; then
+            WEBHOOK_PAYLOAD="${WEBHOOK_PAYLOAD},\"secret_token\":\"${TELEGRAM_SECRET_TOKEN}\""
+            echo -e "${BLUE}🔐 Including secret token for webhook authentication${NC}"
+        fi
+        WEBHOOK_PAYLOAD="${WEBHOOK_PAYLOAD}}"
+        
+        WEBHOOK_RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
             -H "Content-Type: application/json" \
-            -d "{\"url\":\"${WEBHOOK_URL}\"}" || true
-        echo -e "${GREEN}✅ Telegram webhook configured${NC}"
+            -d "$WEBHOOK_PAYLOAD" 2>&1) || true
+        
+        if echo "$WEBHOOK_RESPONSE" | grep -q '"ok":true'; then
+            echo -e "${GREEN}✅ Telegram webhook configured${NC}"
+        else
+            echo -e "${RED}❌ Webhook configuration failed: ${WEBHOOK_RESPONSE}${NC}"
+        fi
     fi
 else
     echo -e "${RED}❌ Could not retrieve webhook URL${NC}"

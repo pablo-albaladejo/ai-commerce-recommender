@@ -2,6 +2,7 @@ import middy from '@middy/core';
 import type { CheckRateLimit } from '../../application/services/counter-service';
 import type { CounterResult } from '../../domain/counter';
 import { RateLimitError } from '../../domain/errors';
+import { httpResponse } from '../../shared/http-response';
 
 type RateLimiterConfig = {
   tableName: string;
@@ -9,9 +10,15 @@ type RateLimiterConfig = {
   windowSeconds?: number;
 };
 
+export type OnRateLimitExceeded = (
+  chatId: string,
+  info: { retryAfter?: number; limit: number; remaining: number }
+) => Promise<void>;
+
 type RateLimiterDependencies = {
   checkRateLimit: CheckRateLimit;
   extractChatId: (event: unknown) => string | undefined;
+  onLimitExceeded?: OnRateLimitExceeded;
 };
 
 export const rateLimiterMiddleware =
@@ -35,13 +42,26 @@ export const rateLimiterMiddleware =
           result;
 
         if (!result.allowed) {
+          const errorInfo = {
+            retryAfter: result.retryAfter,
+            limit: result.limit,
+            remaining: result.remaining,
+          };
+
+          // If callback provided, notify user and return early (no error thrown)
+          if (deps.onLimitExceeded) {
+            await deps.onLimitExceeded(chatId, errorInfo);
+            request.response = httpResponse(200, {
+              success: true,
+              message: 'Rate limit notification sent',
+            });
+            return request.response;
+          }
+
+          // No callback: throw error for error handler
           throw new RateLimitError(
             'Too many requests, please wait and try again',
-            {
-              retryAfter: result.retryAfter,
-              limit: result.limit,
-              remaining: result.remaining,
-            }
+            errorInfo
           );
         }
       },

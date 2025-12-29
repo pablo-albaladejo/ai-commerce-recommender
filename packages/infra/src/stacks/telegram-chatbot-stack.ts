@@ -17,12 +17,12 @@ import {
   createLambdaAlarm,
   createSimpleTable,
   createStackOutputs,
-  createTable,
 } from './stack-helpers';
 
 export type TelegramChatbotStackProps = StackProps & {
   environment: string;
   telegramBotToken?: string;
+  telegramSecretToken?: string;
   catalogBucket?: string;
   catalogPrefix?: string;
   bedrockModels?: { embedModel?: string; chatModel?: string };
@@ -32,6 +32,7 @@ type LambdaConfig = Pick<
   TelegramChatbotStackProps,
   | 'environment'
   | 'telegramBotToken'
+  | 'telegramSecretToken'
   | 'catalogBucket'
   | 'catalogPrefix'
   | 'bedrockModels'
@@ -50,33 +51,26 @@ export class TelegramChatbotStack extends Stack {
     const {
       environment,
       telegramBotToken,
+      telegramSecretToken,
       catalogBucket,
       catalogPrefix,
       bedrockModels,
     } = props;
 
-    this.quotasTable = createTable(
+    this.quotasTable = createSimpleTable(
       this,
       'QuotasTable',
       `telegram-chatbot-quotas-${this.stackName}`,
       {
-        pk: 'userId',
-        sk: 'quotaType',
-        gsiPk: 'quotaType',
-        gsiSk: 'userId',
-        gsiName: 'QuotaTypeIndex',
+        pk: 'pk',
       }
     );
-    this.budgetsTable = createTable(
+    this.budgetsTable = createSimpleTable(
       this,
       'BudgetsTable',
       `telegram-chatbot-budgets-${this.stackName}`,
       {
-        pk: 'userId',
-        sk: 'budgetPeriod',
-        gsiPk: 'budgetPeriod',
-        gsiSk: 'userId',
-        gsiName: 'BudgetPeriodIndex',
+        pk: 'pk',
       }
     );
     this.conversationContextTable = createSimpleTable(
@@ -91,6 +85,7 @@ export class TelegramChatbotStack extends Stack {
     this.telegramWebhookFunction = this.createLambdaFunction({
       environment,
       telegramBotToken,
+      telegramSecretToken,
       catalogBucket,
       catalogPrefix,
       bedrockModels,
@@ -169,6 +164,9 @@ export class TelegramChatbotStack extends Stack {
       CONVERSATION_CONTEXT_TABLE_NAME: this.conversationContextTable.tableName,
       ...(config.telegramBotToken && {
         TELEGRAM_BOT_TOKEN: config.telegramBotToken,
+      }),
+      ...(config.telegramSecretToken && {
+        TELEGRAM_SECRET_TOKEN: config.telegramSecretToken,
       }),
       ...(config.catalogBucket && { CATALOG_BUCKET: config.catalogBucket }),
       ...(config.catalogPrefix && { CATALOG_PREFIX: config.catalogPrefix }),

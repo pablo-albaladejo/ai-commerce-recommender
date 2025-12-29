@@ -28,31 +28,27 @@ export const recordTokenUsage =
     const totalTokens = inputTokens + outputTokens;
     const now = new Date().toISOString();
 
-    try {
-      const existing = await getRecord(tableName, pk);
-      if (existing) {
-        await incrementWithTokens({
-          tableName,
-          key: pk,
-          totalTokens,
-          inputTokens,
-          outputTokens,
-          ttl,
-        });
-      } else {
-        await putRecord(tableName, {
-          pk,
-          user_id: userId,
-          date,
-          count: totalTokens,
-          input_tokens: inputTokens,
-          output_tokens: outputTokens,
-          created_at: now,
-          updated_at: now,
-          ttl,
-        });
-      }
-    } catch {
-      // Silent fail - not critical
+    const existing = await getRecord(tableName, pk);
+    if (existing) {
+      await incrementWithTokens({
+        tableName,
+        key: pk,
+        totalTokens,
+        inputTokens,
+        outputTokens,
+        ttl,
+      });
+    } else {
+      await putRecord(tableName, {
+        pk,
+        user_id: userId,
+        date,
+        count: totalTokens,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        created_at: now,
+        updated_at: now,
+        ttl,
+      });
     }
   };

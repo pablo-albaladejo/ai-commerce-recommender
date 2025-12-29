@@ -29,6 +29,7 @@ new TelegramChatbotStack(app, stackName, {
 
   // Optional configuration from context
   telegramBotToken: app.node.tryGetContext('telegramBotToken'),
+  telegramSecretToken: app.node.tryGetContext('telegramSecretToken'),
   catalogBucket: app.node.tryGetContext('catalogBucket'),
   catalogPrefix: app.node.tryGetContext('catalogPrefix'),
 

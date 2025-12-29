@@ -24,22 +24,38 @@ The infrastructure includes:
 
 ## Quick Start
 
-### 1. Build the project
+### 1. Configure environment variables
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit .env with your values:
+# - TELEGRAM_BOT_TOKEN (required) - get from @BotFather
+# - TELEGRAM_SECRET_TOKEN (recommended) - generate with: openssl rand -hex 32
+```
+
+### 2. Build the project
 
 ```bash
 pnpm build
 ```
 
-### 2. Deploy to development environment
+### 3. Deploy to development environment
 
 ```bash
 # Using the deployment script (recommended)
+# Variables are loaded automatically from .env
+./scripts/deploy.sh dev
+
+# Or with explicit variables
 TELEGRAM_BOT_TOKEN=your_bot_token ./scripts/deploy.sh dev
 
 # Or using CDK directly
 pnpm cdk deploy telegram-chatbot-dev \
   -c environment=dev \
-  -c telegramBotToken=your_bot_token
+  -c telegramBotToken=your_bot_token \
+  -c telegramSecretToken=your_secret_token
 ```
 
 ### 3. Configure Telegram webhook
@@ -80,6 +96,7 @@ You can customize the deployment using CDK context:
 pnpm cdk deploy telegram-chatbot-dev \
   -c environment=dev \
   -c telegramBotToken=your_token \
+  -c telegramSecretToken=your_secret \
   -c catalogBucket=your-catalog-bucket \
   -c catalogPrefix=your-prefix/ \
   -c embedModel=amazon.titan-embed-text-v1 \
@@ -131,6 +148,8 @@ The Lambda function is configured with these environment variables:
 ### External Services
 
 - `TELEGRAM_BOT_TOKEN`: Telegram bot authentication token
+- `TELEGRAM_SECRET_TOKEN`: Webhook signature validation token (see
+  [Security](#webhook-authentication))
 - `CATALOG_BUCKET`: S3 bucket for product catalog
 - `CATALOG_PREFIX`: S3 prefix for catalog files
 - `TITAN_EMBED_MODEL_ID`: Bedrock embedding model
@@ -165,6 +184,41 @@ Security features include:
 - **Signature validation**: Telegram webhook verification
 - **Rate limiting**: Abuse protection middleware
 - **X-Ray tracing**: Request tracking and debugging
+
+### Webhook Authentication
+
+The webhook uses Telegram's secret token feature for authentication. When configured, Telegram sends
+the secret token in the `X-Telegram-Bot-Api-Secret-Token` header with every request, which is
+validated by the Lambda.
+
+#### Generate a Secret Token
+
+```bash
+# Generate a secure random token (recommended: 64 hex characters)
+openssl rand -hex 32
+```
+
+#### Configure the Token
+
+1. Add to your `.env` file:
+
+```bash
+TELEGRAM_SECRET_TOKEN=your_generated_token_here
+```
+
+2. Deploy the stack - the deploy script automatically:
+   - Passes the token to the Lambda as an environment variable
+   - Configures the Telegram webhook with the secret token
+
+#### Environment Behavior
+
+| Environment | Validation                                               |
+| ----------- | -------------------------------------------------------- |
+| `dev`       | Optional - skipped if token not configured               |
+| `staging`   | Optional - skipped if token not configured               |
+| `prod`      | **Required** - requests fail if token missing or invalid |
+
+This allows easy local development while ensuring production security.
 
 ## Monitoring and Observability
 

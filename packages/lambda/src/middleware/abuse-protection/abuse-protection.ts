@@ -4,9 +4,15 @@ import type {
   CheckRateLimit,
   RecordTokenUsage,
 } from '../../application/services/counter-service';
-import { dailyQuotaMiddleware } from './daily-quota';
-import { rateLimiterMiddleware } from './rate-limiter';
-import { tokenBudgetMiddleware } from './token-budget';
+import { dailyQuotaMiddleware, type OnDailyQuotaExceeded } from './daily-quota';
+import {
+  rateLimiterMiddleware,
+  type OnRateLimitExceeded,
+} from './rate-limiter';
+import {
+  tokenBudgetMiddleware,
+  type OnTokenBudgetExceeded,
+} from './token-budget';
 
 // Re-export errors and helper for convenience
 export {
@@ -15,6 +21,11 @@ export {
   TokenBudgetError,
 } from '../../domain/errors';
 export { recordActualTokenUsage } from './token-budget';
+export type {
+  OnRateLimitExceeded,
+  OnDailyQuotaExceeded,
+  OnTokenBudgetExceeded,
+};
 
 // ============================================================================
 // Configuration Types
@@ -46,6 +57,10 @@ export type AbuseProtectionDependencies = {
   recordTokenUsage: RecordTokenUsage;
   extractChatId: (event: unknown) => string | undefined;
   extractUserId: (event: unknown) => number | undefined;
+  // Optional callbacks for user notification
+  onRateLimitExceeded?: OnRateLimitExceeded;
+  onDailyQuotaExceeded?: OnDailyQuotaExceeded;
+  onTokenBudgetExceeded?: OnTokenBudgetExceeded;
 };
 
 // ============================================================================
@@ -68,6 +83,7 @@ export const abuseProtectionMiddleware =
         rateLimiterMiddleware({
           checkRateLimit: deps.checkRateLimit,
           extractChatId: deps.extractChatId,
+          onLimitExceeded: deps.onRateLimitExceeded,
         })({
           tableName: config.rateLimit.tableName,
           maxRequests: config.rateLimit.maxRequests,
@@ -81,6 +97,7 @@ export const abuseProtectionMiddleware =
         dailyQuotaMiddleware({
           checkDailyQuota: deps.checkDailyQuota,
           extractUserId: deps.extractUserId,
+          onQuotaExceeded: deps.onDailyQuotaExceeded,
         })({
           tableName: config.dailyQuota.tableName,
           maxMessages: config.dailyQuota.maxMessages,
@@ -94,6 +111,7 @@ export const abuseProtectionMiddleware =
           checkDailyQuota: deps.checkDailyQuota,
           recordTokenUsage: deps.recordTokenUsage,
           extractUserId: deps.extractUserId,
+          onBudgetExceeded: deps.onTokenBudgetExceeded,
         })({
           tableName: config.tokenBudget.tableName,
           maxTokens: config.tokenBudget.maxTokens,

@@ -37,7 +37,7 @@ describe('TelegramChatbotStack', () => {
   });
 
   test('creates DynamoDB tables with correct configuration', () => {
-    // Quotas table
+    // All tables should have PAY_PER_REQUEST billing and TTL
     template.hasResourceProperties('AWS::DynamoDB::Table', {
       BillingMode: 'PAY_PER_REQUEST',
       TimeToLiveSpecification: {
@@ -46,14 +46,16 @@ describe('TelegramChatbotStack', () => {
       },
     });
 
-    // Check for GSI
+    // Should have 3 tables: quotas, budgets, conversation context
+    const tables = template.findResources('AWS::DynamoDB::Table');
+    expect(Object.keys(tables)).toHaveLength(3);
+
+    // Tables use simple pk partition key (no sort key, no GSI)
     template.hasResourceProperties('AWS::DynamoDB::Table', {
-      GlobalSecondaryIndexes: [
+      KeySchema: [
         {
-          IndexName: 'QuotaTypeIndex',
-          Projection: {
-            ProjectionType: 'ALL',
-          },
+          AttributeName: 'pk',
+          KeyType: 'HASH',
         },
       ],
     });
