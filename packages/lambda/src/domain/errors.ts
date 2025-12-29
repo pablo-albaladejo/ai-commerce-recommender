@@ -13,6 +13,7 @@ export class RateLimitError extends Error {
   ) {
     super(message);
     this.name = 'RateLimitError';
+    Object.setPrototypeOf(this, RateLimitError.prototype);
   }
 }
 
@@ -27,6 +28,7 @@ export class DailyQuotaError extends Error {
   ) {
     super(message);
     this.name = 'DailyQuotaError';
+    Object.setPrototypeOf(this, DailyQuotaError.prototype);
   }
 }
 
@@ -41,6 +43,7 @@ export class TokenBudgetError extends Error {
   ) {
     super(message);
     this.name = 'TokenBudgetError';
+    Object.setPrototypeOf(this, TokenBudgetError.prototype);
   }
 }
 
@@ -54,5 +57,6 @@ export class SignatureValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'SignatureValidationError';
+    Object.setPrototypeOf(this, SignatureValidationError.prototype);
   }
 }

@@ -76,7 +76,7 @@ describe('Product_Selector Integration', () => {
     const stats = productSelector.getCatalogStats();
 
     expect(stats.total_products).toBeGreaterThan(0);
-    expect(stats.vendors).toHaveLength(stats.vendors.length);
+    expect(stats.vendors.length).toBeGreaterThan(0);
     expect(stats.price_range.min).toBeGreaterThan(0);
     expect(stats.price_range.max).toBeGreaterThanOrEqual(stats.price_range.min);
   });

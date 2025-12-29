@@ -18,6 +18,7 @@ type TableConfig = {
   gsiPk: string;
   gsiSk: string;
   gsiName: string;
+  removalPolicy?: RemovalPolicy;
 };
 
 export const createTable = (
@@ -32,7 +33,7 @@ export const createTable = (
     sortKey: { name: config.sk, type: AttributeType.STRING },
     billingMode: BillingMode.PAY_PER_REQUEST,
     timeToLiveAttribute: 'ttl',
-    removalPolicy: RemovalPolicy.DESTROY,
+    removalPolicy: config.removalPolicy ?? RemovalPolicy.DESTROY,
   });
   table.addGlobalSecondaryIndex({
     indexName: config.gsiName,

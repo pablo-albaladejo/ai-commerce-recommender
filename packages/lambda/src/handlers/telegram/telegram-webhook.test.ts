@@ -122,7 +122,7 @@ describe('Telegram Webhook Handler', () => {
     );
   });
 
-  it('uses userId 0 when from is missing', async () => {
+  it('uses chat.id as userId when from is missing', async () => {
     const chat = TelegramChatBuilder.build();
     const message = TelegramMessageBuilder.build({ chat });
     const update = {
@@ -138,7 +138,7 @@ describe('Telegram Webhook Handler', () => {
     await baseHandler(createEvent(update));
 
     expect(mockUseCaseExecutor).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 0 })
+      expect.objectContaining({ userId: chat.id })
     );
   });
 

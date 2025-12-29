@@ -101,7 +101,9 @@ const contextManager = contextManagerMiddleware({
   extractUserId: getUserIdFromUpdate,
   extractChatId: event => {
     const chatId = getChatIdFromUpdate(event);
-    return chatId ? parseInt(chatId, 10) : undefined;
+    if (!chatId) return undefined;
+    const parsed = parseInt(chatId, 10);
+    return Number.isNaN(parsed) ? undefined : parsed;
   },
 });
 
@@ -151,7 +153,7 @@ export const baseHandler = async (event: TelegramWebhookEvent) => {
 
   // Execute with event data
   const result = await useCase({
-    userId: message.from?.id ?? 0,
+    userId: message.from?.id ?? message.chat.id,
     chatId: message.chat.id,
     messageId: message.message_id,
     messageText: message.text,

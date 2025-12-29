@@ -167,16 +167,17 @@ export const createAddConversationMessage = (
   return async (userId, chatId, message) => {
     const pk = createKey(userId, chatId);
 
-    if (!message.tokenCount) {
-      message.tokenCount = estimateTokens(message.content);
-    }
+    const messageWithTokens = {
+      ...message,
+      tokenCount: message.tokenCount ?? estimateTokens(message.content),
+    };
 
     try {
       const current = await getContext(userId, chatId);
 
       let state: MessageState = {
-        messages: [...(current?.messages || []), message],
-        totalTokens: (current?.totalTokens || 0) + message.tokenCount,
+        messages: [...(current?.messages || []), messageWithTokens],
+        totalTokens: (current?.totalTokens || 0) + messageWithTokens.tokenCount,
         summary: current?.summary,
       };
 

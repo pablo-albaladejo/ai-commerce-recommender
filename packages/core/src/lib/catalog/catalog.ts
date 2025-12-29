@@ -17,6 +17,9 @@ const parseTags = (tags?: string): string[] =>
     : [];
 
 const extractPriceRange = (variants: ShopifyProduct['variants']) => {
+  if (variants.length === 0) {
+    return { min: 0, max: 0 };
+  }
   const prices = variants.map(v => parseFloat(v.price));
   return { min: Math.min(...prices), max: Math.max(...prices) };
 };

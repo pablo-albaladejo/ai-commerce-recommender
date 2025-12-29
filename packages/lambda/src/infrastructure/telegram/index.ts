@@ -1,34 +1,34 @@
 // Schemas & Types
 export {
-  TelegramUpdateSchema,
-  TelegramMessageSchema,
-  TelegramUserSchema,
   TelegramChatSchema,
-  type TelegramUpdate,
-  type TelegramMessage,
-  type TelegramUser,
+  TelegramMessageSchema,
+  TelegramUpdateSchema,
+  TelegramUserSchema,
   type TelegramChat,
+  type TelegramMessage,
+  type TelegramUpdate,
+  type TelegramUser,
 } from './telegram-schemas';
 
 // Client (re-exported from shared)
 export {
   getTelegramClient,
   resetTelegramClient,
-  type TelegramClient,
-  type SendMessageParams,
   type GetTelegramClientParams,
+  type SendMessageParams,
+  type TelegramClient,
 } from '../shared/telegram-client';
 
 // Utilities
 export {
-  parseTelegramUpdate,
-  getChatIdFromUpdate,
-  getUserIdFromUpdate,
+  extractChatId,
   // Legacy
   extractTelegramData,
   extractUserId,
-  extractChatId,
+  getChatIdFromUpdate,
+  getUserIdFromUpdate,
   isTextMessage,
+  parseTelegramUpdate,
   truncateText,
   validateMessageLength,
   type TelegramEventData,

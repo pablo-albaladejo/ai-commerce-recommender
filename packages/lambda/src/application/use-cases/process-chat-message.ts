@@ -67,7 +67,7 @@ export const processChatMessage =
 
     // For now, send acknowledgment response
     await sendResponse({
-      text: `🤖 Mensaje recibido (${messageText.length} caracteres). El procesamiento con LLM está pendiente de implementar.`,
+      text: `🤖 Message received (${messageText.length} characters). LLM processing is pending implementation.`,
     });
 
     return {
