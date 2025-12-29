@@ -20,16 +20,8 @@
     "composite": true,
     "incremental": true
   },
-  "include": [
-    "packages/*/src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "cdk.out",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ],
+  "include": ["packages/*/src/**/*"],
+  "exclude": ["node_modules", "dist", "cdk.out", "**/*.test.ts", "**/*.spec.ts"],
   "references": [
     { "path": "./packages/core" },
     { "path": "./packages/lambda" },

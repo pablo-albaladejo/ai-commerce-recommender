@@ -1,258 +1,138 @@
-# Implementation Plan: Telegram Chatbot Integration
+# Implementation Plan: Telegram Chatbot
 
 ## Overview
 
-This implementation plan converts the Telegram chatbot design into discrete coding tasks. Each task builds incrementally on previous work, following the established monorepo architecture with AWS Lambda Powertools, Middy middleware, and Zod validation. All storage uses DynamoDB to maintain serverless, cost-effective architecture.
+This implementation plan focuses on completing the Telegram chatbot integration with the existing product recommendation system. The core infrastructure, middleware, and product selection logic are already implemented. The remaining tasks focus on integrating these components and adding the missing LLM-powered conversation capabilities.
 
 ## Tasks
 
-- [ ] 1. Set up project dependencies and core types
-  - Add required dependencies to packages/lambda/package.json
-  - Create shared types for Telegram integration (Telegram_Bot, Update_Object, etc.)
-  - Set up Zod schemas for Telegram webhook data
-  - Define types for all quota and budget management components
-  - _Requirements: All requirements (foundational setup)_
+- [x] 1. Set up core infrastructure and middleware
+  - Core middleware stack (tracing, error handling, abuse protection) is implemented
+  - DynamoDB tables for rate limiting, quotas, and conversation context are configured
+  - CDK infrastructure stack is complete with proper IAM permissions
+  - _Requirements: Infrastructure setup and security_
 
-- [ ] 2. Implement custom Zod parser middleware (Message_Validator)
-  - Create custom parser middleware for Middy + Zod integration
-  - Implement ValidationError class with detailed error handling
-  - Add Powertools integration for observability
-  - Validate and process incoming message content
-  - _Requirements: Data validation and message processing_
+- [x] 2. Implement product catalog and selection system
+  - [x] 2.1 Create product normalization and catalog management
+    - Shopify product normalization is implemented
+    - CatalogManager with in-memory product storage is complete
+    - _Requirements: Product data management_
 
-- [ ] 3. Implement Telegram webhook signature validation
-  - Create signature validation middleware with HMAC-SHA256
-  - Add Powertools tracing and metrics for security events
-  - Implement proper error responses for invalid signatures
-  - _Requirements: Security and authentication_
+  - [x] 2.2 Implement product selection and filtering
+    - ProductSelector with ranking and filtering is implemented
+    - Search filters and product card formatting are complete
+    - _Requirements: Product search and filtering_
 
-- [ ] 4. Implement Rate_Limiter component with DynamoDB
-  - Create rate limiting middleware with user-based limits (e.g., 10 requests/minute per user)
-  - Use DynamoDB with chat_id as partition key and TTL for auto-expiring counters
-  - Implement atomic counters with conditional updates to avoid race conditions
-  - Add configurable limits via environment variables
-  - Add Powertools metrics for rate limit violations and usage patterns
-  - Return appropriate HTTP 429 responses when limits exceeded
-  - _Requirements: API protection and abuse prevention (Requirement 10.8, 10.10)_
+- [x] 3. Set up Telegram webhook infrastructure
+  - [x] 3.1 Create Telegram webhook handler with middleware stack
+    - Complete middleware chain with validation, tracing, and error handling
+    - Telegram message schema validation with Zod
+    - _Requirements: Telegram integration and message processing_
 
-- [ ] 5. Implement Daily_Quota_Manager component with DynamoDB
-  - Create daily message quota tracking per user using DynamoDB
-  - Use composite key: userId#date for partition key
-  - Implement TTL for automatic cleanup after quota period
-  - Add quota reset logic at midnight UTC
-  - Add configurable daily limits per user (e.g., 50 messages/day)
-  - Use DynamoDB atomic counters for thread-safe quota tracking
-  - Add Powertools metrics for quota usage and violations
-  - Return appropriate responses when daily quota exceeded
-  - _Requirements: Daily message quota management (Requirement 10.1, 10.2)_
+  - [x] 3.2 Implement abuse protection and rate limiting
+    - Rate limiting, daily quotas, and token budget middleware are implemented
+    - DynamoDB-backed counters and context management
+    - _Requirements: Security and abuse prevention_
 
-- [ ] 6. Implement Token_Budget_Manager component with DynamoDB
-  - Create daily token usage tracking per user using DynamoDB
-  - Track input and output tokens from LLM calls
-  - Use composite key: userId#date for partition key with TTL
-  - Add configurable daily token limits (e.g., 10,000 tokens/day per user)
-  - Add budget reset logic at midnight UTC using TTL
-  - Use DynamoDB atomic operations for token counting
-  - Add Powertools metrics for token usage patterns
-  - Prevent LLM calls when budget exceeded
-  - _Requirements: Daily token budget management (Requirement 10.3, 10.4)_
+- [ ] 4. Integrate LLM conversation capabilities
+  - [ ] 4.1 Implement Bedrock service integration
+    - Create BedrockService class for LLM interactions
+    - Implement conversation context management
+    - Add prompt templates for product recommendations
+    - _Requirements: AI-powered conversations and product recommendations_
 
-- [ ] 7. Implement Context_Manager component with DynamoDB
-  - Create conversation history management per user using DynamoDB
-  - Store last 6 user/assistant messages plus compact summary (Requirement 10.6)
-  - Use userId#chatId as partition key with TTL for cleanup
-  - Implement context window management and token counting
-  - Add context compression when approaching token limits
-  - Optimize context for LLM processing efficiency
-  - Add automatic cleanup for inactive conversations using TTL
-  - _Requirements: Conversation history management (Requirement 10.6)_
+  - [ ]* 4.2 Write property tests for Bedrock service
+    - **Property 1: LLM response consistency**
+    - **Validates: Requirements TBD**
 
-- [ ] 8. Implement Product_Selector component
-  - Create product selection logic for LLM context
-  - Pass only top 8-10 candidates with short cards (max 250-300 chars each)
-  - Implement product filtering and ranking algorithms
-  - Add product data formatting for LLM consumption
-  - Optimize product metadata for token efficiency
-  - Integrate with existing @ai-commerce/core catalog
-  - _Requirements: Product selection and formatting (Requirement 10.7)_
+  - [ ] 4.3 Complete process-telegram-message use case
+    - Integrate ProductSelector with LLM conversation flow
+    - Extract user intent and product preferences from messages
+    - Generate contextual responses with product recommendations
+    - _Requirements: Message processing and response generation_
 
-- [ ] 9. Implement Response_Manager component
-  - Create LLM response generation with limits
-  - Implement response length limits and truncation
-  - Add response quality validation
-  - Implement fallback responses for LLM failures
-  - Track response generation metrics with Powertools
-  - Optimize for cost-effective LLM usage
-  - _Requirements: LLM response management and limits_
+  - [ ]* 4.4 Write unit tests for message processing
+    - Test intent extraction and product recommendation logic
+    - Test conversation flow and context management
+    - _Requirements: Message processing and response generation_
 
-- [ ] 10. Create core Webhook_Handler (main Lambda function)
-  - Implement main Lambda handler with complete Middy stack
-  - Add Powertools logger, tracer, and metrics initialization
-  - Integrate all custom middleware and components in correct order
-  - Wire together all quota, budget, and context managers
-  - Use Node.js 20 runtime with TypeScript compilation
-  - _Requirements: Core webhook processing (Requirement 9.5)_
+- [ ] 5. Implement catalog loading from S3
+  - [ ] 5.1 Add S3 catalog loading to CatalogManager
+    - Implement S3-based catalog loading with caching
+    - Add environment configuration for catalog bucket and prefix
+    - Handle catalog refresh and error scenarios
+    - _Requirements: Dynamic catalog management_
 
-- [ ] 11. Implement message extraction and transformation
-  - Create functions to extract messages from Telegram updates
-  - Transform Telegram format to internal chat format
-  - Handle different message types (text, commands, callbacks)
-  - Integrate with Message_Validator for content processing
-  - _Requirements: Message processing and format conversion_
+  - [ ]* 5.2 Write integration tests for catalog loading
+    - Test S3 catalog loading and caching behavior
+    - Test error handling for missing or invalid catalogs
+    - _Requirements: Dynamic catalog management_
 
-- [ ] 12. Integrate with existing chat API
-  - Connect webhook handler to existing @ai-commerce/core chat logic
-  - Propagate trace context through chat processing
-  - Add error handling and retry mechanisms
-  - Integrate Product_Selector with catalog system
-  - _Requirements: Chat integration and recommendation generation_
+- [ ] 6. Add conversation context and memory
+  - [ ] 6.1 Enhance conversation context service
+    - Implement conversation history tracking
+    - Add user preference persistence
+    - Handle conversation state across multiple messages
+    - _Requirements: Conversation continuity and personalization_
 
-- [ ] 13. Implement response formatting for Telegram
-  - Create functions to format chat responses for Telegram
-  - Generate inline keyboards for product recommendations
-  - Handle message truncation and formatting constraints
-  - Integrate with Response_Manager for length limits
-  - _Requirements: Response formatting and user interaction_
+  - [ ]* 6.2 Write property tests for conversation context
+    - **Property 2: Context persistence across messages**
+    - **Validates: Requirements TBD**
 
-- [ ] 14. Add comprehensive error handling
-  - Implement custom error classes with trace context
-  - Create error handler middleware for different error types
-  - Add graceful degradation for external service failures
-  - Handle quota and budget exceeded scenarios
-  - Log rate limits, quotas, and token budget violations without sensitive content
-  - _Requirements: Error handling and system reliability (Requirement 10.9)_
+- [ ] 7. Implement response formatting for Telegram
+  - [ ] 7.1 Create Telegram response formatter
+    - Format product recommendations for Telegram display
+    - Add inline keyboards for product interactions
+    - Handle message length limits and rich formatting
+    - _Requirements: User-friendly product presentation_
 
-- [ ] 15. Set up CDK_Stack infrastructure (serverless only)
-  - Create Lambda function configuration with Powertools
-  - Set up API_Gateway using HTTP API (not REST API) to minimize costs
-  - Configure DynamoDB tables for quotas, budgets, and context
-  - Set up proper DynamoDB indexes and TTL configurations
-  - Configure environment variables and IAM permissions
-  - Enable X-Ray tracing and CloudWatch integration
-  - Add CloudWatch alarms for quotas, budgets, and errors
-  - Output webhook URL for Telegram configuration
-  - _Requirements: Infrastructure and deployment (Requirement 9.2, 9.3, 9.4)_
+  - [ ]* 7.2 Write unit tests for response formatting
+    - Test Telegram message formatting and limits
+    - Test inline keyboard generation
+    - _Requirements: User-friendly product presentation_
 
-- [ ] 16. Implement unit tests
-  - Test custom parser middleware with valid/invalid data
-  - Test signature validation with known test vectors
-  - Test rate limiting with DynamoDB atomic operations
-  - Test Daily_Quota_Manager with quota scenarios and TTL
-  - Test Token_Budget_Manager with budget scenarios and atomic counters
-  - Test Context_Manager with conversation flows and TTL cleanup
-  - Test Product_Selector with different product sets
-  - Test Response_Manager with various response scenarios
-  - Test message transformation functions
-  - Test error handling scenarios
-  - _Requirements: Testing and validation_
+- [ ] 8. Add error handling and monitoring
+  - [ ] 8.1 Enhance error responses for users
+    - Implement user-friendly error messages
+    - Add fallback responses for service failures
+    - Ensure graceful degradation when services are unavailable
+    - _Requirements: Reliability and user experience_
 
-- [ ] 17. Add integration tests
-  - Test complete webhook flow with mock Telegram updates
-  - Test Powertools integration (logging, tracing, metrics)
-  - Test quota and budget enforcement with DynamoDB
-  - Test context management across multiple conversations
-  - Test product selection and LLM integration
-  - Test DynamoDB TTL and cleanup mechanisms
-  - Test error scenarios and recovery mechanisms
-  - _Requirements: End-to-end testing_
+  - [ ]* 8.2 Write integration tests for error scenarios
+    - Test error handling across the full request flow
+    - Test fallback behavior and user messaging
+    - _Requirements: Reliability and user experience_
 
-- [ ] 18. Final integration and deployment
-  - Deploy to test environment with development bot
-  - Configure Bot_Token and BotFather integration
-  - Verify webhook endpoint responds correctly
-  - Test all quota and budget management in real environment
-  - Test DynamoDB performance and cost optimization
-  - Test various message types and error scenarios
-  - Monitor logs, traces, and metrics in CloudWatch
-  - Set up alerts for quotas, budgets, rate limits, and errors
-  - _Requirements: Deployment and monitoring_
+- [ ] 9. Checkpoint - Integration testing
+  - Ensure all components work together end-to-end
+  - Test complete conversation flows with product recommendations
+  - Verify performance and error handling under load
+  - Ask the user if questions arise
 
-## DynamoDB Table Designs
+- [ ] 10. Add deployment and configuration management
+  - [ ] 10.1 Complete CDK deployment scripts
+    - Add catalog bucket configuration to CDK stack
+    - Implement environment-specific configuration
+    - Add monitoring and alerting setup
+    - _Requirements: Production deployment and monitoring_
 
-### Rate Limiting Table
+  - [ ]* 10.2 Write deployment validation tests
+    - Test infrastructure deployment and configuration
+    - Validate environment variables and permissions
+    - _Requirements: Production deployment and monitoring_
 
-```typescript
-TableName: telegram-rate-limits
-PartitionKey: chat_id (number)
-SortKey: window_start (string) // ISO timestamp
-TTL: expires_at (number) // Unix timestamp
-Attributes: {
-  request_count: number,
-  limit: number,
-  window_size_ms: number
-}
-```
-
-### Daily Quotas Table
-
-```typescript
-TableName: telegram-quotas
-PartitionKey: user_id#date (string) // e.g., "123456#2024-01-15"
-TTL: expires_at (number) // Unix timestamp (next day)
-Attributes: {
-  user_id: number,
-  date: string,
-  message_count: number,
-  message_limit: number,
-  token_count: number,
-  token_limit: number
-}
-```
-
-### Conversation Context Table
-
-```typescript
-TableName: telegram-context
-PartitionKey: user_id#chat_id (string)
-TTL: expires_at (number) // Unix timestamp (24h after last activity)
-Attributes: {
-  user_id: number,
-  chat_id: number,
-  messages: ContextMessage[],
-  last_activity: string, // ISO timestamp
-  token_count: number,
-  summary: string
-}
-```
-
-## Environment Variables
-
-```typescript
-// Rate limiting
-RATE_LIMIT_PER_USER_PER_MINUTE = 10;
-RATE_LIMIT_GLOBAL_PER_MINUTE = 1000;
-
-// Daily quotas
-DAILY_MESSAGE_QUOTA_PER_USER = 50;
-DAILY_TOKEN_BUDGET_PER_USER = 10000;
-
-// Context management
-MAX_CONTEXT_MESSAGES = 6;
-MAX_CONTEXT_TOKENS = 4000;
-
-// Product selection
-MAX_PRODUCTS_FOR_LLM = 10;
-PRODUCT_CARD_MAX_CHARS = 300;
-
-// Response management
-MAX_RESPONSE_LENGTH = 4096;
-MAX_RESPONSE_TOKENS = 1000;
-RESPONSE_TIMEOUT_MS = 30000;
-
-// Infrastructure (DynamoDB only)
-TELEGRAM_BOT_TOKEN = your - bot - token;
-DYNAMODB_RATE_LIMITS_TABLE = telegram - rate - limits;
-DYNAMODB_QUOTAS_TABLE = telegram - quotas;
-DYNAMODB_CONTEXT_TABLE = telegram - context;
-```
+- [ ] 11. Final checkpoint - End-to-end validation
+  - Deploy to test environment and validate full functionality
+  - Test Telegram bot registration and webhook setup
+  - Verify product recommendations work correctly
+  - Ensure all tests pass, ask the user if questions arise
 
 ## Notes
 
-- **Serverless Architecture**: All storage uses DynamoDB (no Redis, no always-on infrastructure)
-- **Cost Optimization**: HTTP API Gateway, DynamoDB TTL for cleanup, optimized LLM usage
-- **Atomic Operations**: DynamoDB conditional updates prevent race conditions
-- **Auto Cleanup**: TTL automatically removes expired data
-- **Observability**: AWS Lambda Powertools throughout
-- **Type Safety**: Custom Zod parser middleware
-- **Abuse Protection**: Comprehensive quotas, budgets, and rate limiting
-- **Scalability**: DynamoDB scales automatically with usage
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- The core infrastructure and product selection system are already implemented
+- Focus is on integrating LLM capabilities and completing the conversation flow
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation
+- Property tests validate universal correctness properties
+- Unit tests validate specific examples and edge cases

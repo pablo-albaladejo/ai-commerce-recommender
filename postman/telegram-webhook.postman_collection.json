@@ -1,0 +1,1053 @@
+{
+  "info": {
+    "name": "AI Commerce Recommender - Telegram Webhook",
+    "description": "Collection for testing the Telegram webhook endpoint of the AI Commerce Recommender chatbot.\n\n## Setup\n\n1. Set the `botToken` variable with your Telegram Bot Token (from @BotFather)\n2. Set the `baseUrl` variable to your API Gateway URL\n3. (Optional) Set the `secretToken` variable for signature validation\n\n## Folders\n\n- **Telegram Bot API**: Configure webhook with Telegram (setWebhook, getWebhookInfo, etc.)\n- **Simulate Webhook Calls**: Test your Lambda by simulating Telegram updates",
+    "_postman_id": "ai-commerce-telegram-webhook",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://your-api-id.execute-api.us-east-1.amazonaws.com",
+      "type": "string",
+      "description": "API Gateway base URL (get from CloudFormation outputs)"
+    },
+    {
+      "key": "botToken",
+      "value": "",
+      "type": "string",
+      "description": "Telegram Bot Token from @BotFather (required for Telegram API calls)"
+    },
+    {
+      "key": "secretToken",
+      "value": "",
+      "type": "string",
+      "description": "Secret token for webhook signature validation (optional)"
+    },
+    {
+      "key": "chatId",
+      "value": "123456789",
+      "type": "string",
+      "description": "Test chat ID (get yours by messaging the bot and calling getUpdates)"
+    },
+    {
+      "key": "userId",
+      "value": "987654321",
+      "type": "string",
+      "description": "Test user ID"
+    },
+    {
+      "key": "updateId",
+      "value": "1",
+      "type": "string",
+      "description": "Auto-incrementing update ID"
+    }
+  ],
+  "item": [
+    {
+      "name": "Telegram Bot API",
+      "description": "Endpoints to configure and manage the webhook with Telegram's servers.\n\n**Required**: Set the `botToken` variable with your bot token from @BotFather.",
+      "item": [
+        {
+          "name": "1. Get Bot Info (getMe)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is ok', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    console.log('Bot username:', jsonData.result.username);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://api.telegram.org/bot{{botToken}}/getMe",
+              "protocol": "https",
+              "host": ["api", "telegram", "org"],
+              "path": ["bot{{botToken}}", "getMe"]
+            },
+            "description": "Get basic information about the bot. Use this to verify your bot token is correct."
+          }
+        },
+        {
+          "name": "2. Set Webhook",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Webhook set successfully', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    console.log('Result:', jsonData.description);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{baseUrl}}/telegram/webhook\",\n  \"secret_token\": \"{{secretToken}}\",\n  \"allowed_updates\": [\"message\", \"edited_message\", \"callback_query\"],\n  \"drop_pending_updates\": true\n}"
+            },
+            "url": {
+              "raw": "https://api.telegram.org/bot{{botToken}}/setWebhook",
+              "protocol": "https",
+              "host": ["api", "telegram", "org"],
+              "path": ["bot{{botToken}}", "setWebhook"]
+            },
+            "description": "Register your webhook URL with Telegram.\n\n**Parameters:**\n- `url`: Your API Gateway webhook URL\n- `secret_token`: Token that Telegram sends in X-Telegram-Bot-Api-Secret-Token header\n- `allowed_updates`: Types of updates to receive\n- `drop_pending_updates`: Clear pending updates"
+          }
+        },
+        {
+          "name": "3. Get Webhook Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is ok', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    console.log('Webhook URL:', jsonData.result.url || '(not set)');",
+                  "    console.log('Pending updates:', jsonData.result.pending_update_count);",
+                  "    if (jsonData.result.last_error_message) {",
+                  "        console.log('Last error:', jsonData.result.last_error_message);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://api.telegram.org/bot{{botToken}}/getWebhookInfo",
+              "protocol": "https",
+              "host": ["api", "telegram", "org"],
+              "path": ["bot{{botToken}}", "getWebhookInfo"]
+            },
+            "description": "Get current webhook status including URL, pending updates, and errors."
+          }
+        },
+        {
+          "name": "4. Delete Webhook",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Webhook deleted successfully', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"drop_pending_updates\": true\n}"
+            },
+            "url": {
+              "raw": "https://api.telegram.org/bot{{botToken}}/deleteWebhook",
+              "protocol": "https",
+              "host": ["api", "telegram", "org"],
+              "path": ["bot{{botToken}}", "deleteWebhook"]
+            },
+            "description": "Remove the webhook. Use before setting a new URL or to switch to polling."
+          }
+        },
+        {
+          "name": "5. Get Updates (Polling)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is ok', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    console.log('Updates count:', jsonData.result.length);",
+                  "    if (jsonData.result.length > 0) {",
+                  "        const lastUpdate = jsonData.result[jsonData.result.length - 1];",
+                  "        if (lastUpdate.message && lastUpdate.message.chat) {",
+                  "            pm.collectionVariables.set('chatId', lastUpdate.message.chat.id.toString());",
+                  "            console.log('Saved chatId:', lastUpdate.message.chat.id);",
+                  "        }",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://api.telegram.org/bot{{botToken}}/getUpdates?limit=10",
+              "protocol": "https",
+              "host": ["api", "telegram", "org"],
+              "path": ["bot{{botToken}}", "getUpdates"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get pending updates (only works when webhook is NOT set).\n\nUse this to get your chat_id:\n1. Delete webhook\n2. Message your bot\n3. Call this endpoint\n4. Copy chat.id from response"
+          }
+        },
+        {
+          "name": "6. Send Test Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Message sent successfully', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chat_id\": {{chatId}},\n  \"text\": \"🤖 Test message from Postman!\\n\\nIf you see this, the bot can send messages.\",\n  \"parse_mode\": \"HTML\"\n}"
+            },
+            "url": {
+              "raw": "https://api.telegram.org/bot{{botToken}}/sendMessage",
+              "protocol": "https",
+              "host": ["api", "telegram", "org"],
+              "path": ["bot{{botToken}}", "sendMessage"]
+            },
+            "description": "Send a test message to verify the bot works."
+          }
+        },
+        {
+          "name": "7. Send Product Card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status code is 200', function () {", "    pm.response.to.have.status(200);", "});"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chat_id\": {{chatId}},\n  \"text\": \"<b>🪜 Escalera de Fibra de Vidrio Werner</b>\\n\\n💰 <b>Precio:</b> $599.99\\n📦 <b>Disponible:</b> Sí\\n🏷️ <b>Marca:</b> Werner\\n\\n<a href=\\\"https://example.com/product/123\\\">Ver producto</a>\",\n  \"parse_mode\": \"HTML\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [\n        { \"text\": \"🛒 Comprar\", \"url\": \"https://example.com/product/123\" },\n        { \"text\": \"📋 Más detalles\", \"callback_data\": \"details_123\" }\n      ]\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "https://api.telegram.org/bot{{botToken}}/sendMessage",
+              "protocol": "https",
+              "host": ["api", "telegram", "org"],
+              "path": ["bot{{botToken}}", "sendMessage"]
+            },
+            "description": "Send a formatted product card with inline buttons."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Simulate Webhook Calls",
+      "description": "Simulate Telegram sending updates to your webhook. Use these to test your Lambda without a real Telegram connection.",
+      "item": [
+        {
+          "name": "Basic Messages",
+          "description": "Basic message scenarios for product recommendations",
+          "item": [
+            {
+              "name": "Simple Product Query",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Telegram-Bot-Api-Secret-Token", "value": "{{secretToken}}", "disabled": true }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 1001,\n    \"from\": {\n      \"id\": {{userId}},\n      \"is_bot\": false,\n      \"first_name\": \"Test\",\n      \"username\": \"testuser\",\n      \"language_code\": \"es\"\n    },\n    \"date\": {{$timestamp}},\n    \"chat\": {\n      \"id\": {{chatId}},\n      \"type\": \"private\",\n      \"first_name\": \"Test\",\n      \"username\": \"testuser\"\n    },\n    \"text\": \"Necesito una escalera de fibra de vidrio de 6 metros\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Simple product recommendation query"
+              }
+            },
+            {
+              "name": "Price Filter Query",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 1002,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\", \"username\": \"testuser\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{chatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Quiero un taladro por menos de 500 pesos\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Query with price filter"
+              }
+            },
+            {
+              "name": "Brand Query",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 1003,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\", \"username\": \"testuser\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{chatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Muestrame productos de la marca Werner\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Query for products by brand"
+              }
+            },
+            {
+              "name": "Greeting",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 1004,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\", \"username\": \"testuser\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{chatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Hola, buenos días!\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Simple greeting message"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edge Cases",
+          "description": "Edge case scenarios",
+          "item": [
+            {
+              "name": "Message Without Text",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                      "pm.test('Update acknowledged', function () {",
+                      "    const jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.message).to.equal('Update acknowledged');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 2001,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{chatId}}, \"type\": \"private\", \"first_name\": \"Test\" }\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Photo/sticker without text - should acknowledge"
+              }
+            },
+            {
+              "name": "Edited Message",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"edited_message\": {\n    \"message_id\": 2002,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{chatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Mensaje editado: escalera de aluminio\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Edited message update"
+              }
+            },
+            {
+              "name": "Callback Query",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"callback_query\": {\n    \"id\": \"callback_123\",\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"chat_instance\": \"123456789\",\n    \"data\": \"details_123\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Inline button click callback"
+              }
+            },
+            {
+              "name": "Group Message",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 2004,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": -1009876543210, \"type\": \"group\", \"title\": \"Test Group\" },\n    \"text\": \"Hola grupo, necesito una recomendación\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Message in a group chat"
+              }
+            },
+            {
+              "name": "Long Detailed Message",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 2005,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{chatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Busco una escalera de fibra de vidrio para trabajos eléctricos, de al menos 6 metros, plegable, capacidad 150 kg, patas antideslizantes, color naranja, presupuesto máximo 800 dólares.\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Long message with multiple requirements"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Conversation Flow",
+          "description": "Multi-turn conversation test",
+          "item": [
+            {
+              "name": "1. Initial Query",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "pm.collectionVariables.set('conversationChatId', Date.now().toString());",
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 3001,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{conversationChatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Busco herramientas para trabajo eléctrico\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Start of conversation"
+              }
+            },
+            {
+              "name": "2. Add Price Filter",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 3002,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{conversationChatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Que sean de menos de 300 dólares\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Add price constraint"
+              }
+            },
+            {
+              "name": "3. Ask for Details",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 3003,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{conversationChatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Cuéntame más sobre la primera opción\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Request more details"
+              }
+            },
+            {
+              "name": "4. Change Topic",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 3004,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{conversationChatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Mejor busquemos escaleras de aluminio\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Change conversation topic"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Security Tests",
+          "description": "Validation and security tests",
+          "item": [
+            {
+              "name": "With Valid Secret Token",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": ["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Telegram-Bot-Api-Secret-Token", "value": "{{secretToken}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 4001,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{chatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Test with valid signature\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Request with valid secret token"
+              }
+            },
+            {
+              "name": "With Invalid Secret Token",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200 or 401', function () { pm.expect(pm.response.code).to.be.oneOf([200, 401]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Telegram-Bot-Api-Secret-Token", "value": "invalid-token-12345" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 4002,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Test\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{chatId}}, \"type\": \"private\", \"first_name\": \"Test\" },\n    \"text\": \"Test with invalid signature\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Request with invalid token (behavior depends on config)"
+              }
+            },
+            {
+              "name": "Invalid JSON",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 400 or 422', function () { pm.expect(pm.response.code).to.be.oneOf([400, 422]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ invalid json }"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Malformed JSON body"
+              }
+            },
+            {
+              "name": "Missing Required Fields",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 400 or 422', function () { pm.expect(pm.response.code).to.be.oneOf([400, 422]); });"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"message\": { \"text\": \"Missing update_id\" }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Missing required fields"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rate Limiting",
+          "description": "Rate limiting tests",
+          "item": [
+            {
+              "name": "Rapid Fire (run 7+ times)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "let updateId = parseInt(pm.collectionVariables.get('updateId') || '1');",
+                      "pm.collectionVariables.set('updateId', (updateId + 1).toString());",
+                      "pm.variables.set('currentUpdateId', updateId);",
+                      "let iteration = parseInt(pm.collectionVariables.get('rateLimitIteration') || '1');",
+                      "pm.collectionVariables.set('rateLimitIteration', (iteration + 1).toString());",
+                      "console.log('Rate limit iteration:', iteration);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200 or 429', function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
+                      "if (pm.response.code === 429) {",
+                      "    pm.test('Rate limit response', function () { pm.expect(pm.response.json()).to.have.property('error'); });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"update_id\": {{currentUpdateId}},\n  \"message\": {\n    \"message_id\": 5001,\n    \"from\": { \"id\": {{userId}}, \"is_bot\": false, \"first_name\": \"Rapid\" },\n    \"date\": {{$timestamp}},\n    \"chat\": { \"id\": {{chatId}}, \"type\": \"private\", \"first_name\": \"Rapid\" },\n    \"text\": \"Rate limit test {{$randomInt}}\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/telegram/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["telegram", "webhook"]
+                },
+                "description": "Run 7+ times rapidly to trigger rate limit (6/min)"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('conversationChatId')) {",
+          "    pm.collectionVariables.set('conversationChatId', pm.collectionVariables.get('chatId'));",
+          "}"
+        ]
+      }
+    }
+  ]
+}

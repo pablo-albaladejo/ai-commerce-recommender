@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run lint-staged to check and fix files
+pnpm lint-staged
+
+# Run type checking
+echo "🔍 Running TypeScript type checking..."
+pnpm build
+
+# Run tests
+echo "🧪 Running tests..."
+pnpm test

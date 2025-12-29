@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🚀 Running pre-push checks..."
+
+# Run full linting check (without auto-fix)
+echo "🔍 Running ESLint check..."
+pnpm lint:check
+
+# Run format check
+echo "💅 Checking code formatting..."
+pnpm format:check
+
+# Run full test suite
+echo "🧪 Running full test suite..."
+pnpm test
+
+# Build all packages
+echo "🏗️  Building all packages..."
+pnpm build
+
+echo "✅ All pre-push checks passed!"

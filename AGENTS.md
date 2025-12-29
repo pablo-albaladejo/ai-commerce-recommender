@@ -1,22 +1,26 @@
 # AGENTS.md — ai-commerce-recommender
 
-This repository is a **pnpm monorepo** template for building a **serverless commerce product recommender chatbot** on AWS:
+This repository is a **pnpm monorepo** template for building a **serverless commerce product
+recommender chatbot** on AWS:
+
 - **Package Manager**: pnpm with workspaces
 - **Architecture**: Monorepo with multiple packages
 - Hybrid retrieval: **BM25 + Embeddings + Rank Fusion (RRF)**
 - Semantic scoring: **Cosine similarity**
 - LLM: AWS Bedrock (Claude Haiku or similar)
 - Embeddings: AWS Bedrock (Titan Embeddings)
-- Infra: **AWS CDK (TypeScript)**  
+- Infra: **AWS CDK (TypeScript)**
 - Runtime: **AWS Lambda + API Gateway (HTTP API) + S3**
 
-The repo is optimized for **low-cost demos** (no always-on DB). With ~500 products, everything runs in-memory.
+The repo is optimized for **low-cost demos** (no always-on DB). With ~500 products, everything runs
+in-memory.
 
 ---
 
 ## 1) High-level Architecture
 
 ### Offline indexing (build-time)
+
 1. Ingest catalog JSON (Shopify or generic)
 2. Normalize products into a stable schema
 3. Build BM25 index from `doc_text`
@@ -28,6 +32,7 @@ The repo is optimized for **low-cost demos** (no always-on DB). With ~500 produc
    - `id_map.json` (if needed)
 
 ### Online runtime (per request)
+
 1. Load artifacts from S3 into Lambda memory (cached across warm invocations)
 2. Run:
    - BM25 search (topK)
@@ -94,6 +99,7 @@ The repo is optimized for **low-cost demos** (no always-on DB). With ~500 produc
 ## 3) Ground Rules for Agents
 
 ### 3.1 Keep costs low
+
 - Do NOT introduce always-on infrastructure (OpenSearch, RDS) unless explicitly requested.
 - Prefer: S3 + Lambda + in-memory indices.
 - Limit LLM calls to:
@@ -102,6 +108,7 @@ The repo is optimized for **low-cost demos** (no always-on DB). With ~500 produc
 - Keep prompts short; avoid sending full product descriptions to the LLM.
 
 ### 3.2 Maintain strict separation of concerns (monorepo)
+
 - `packages/core/src/lib/*` contains shared business logic and should remain platform-neutral.
 - `packages/lambda/src/*` contains runtime handlers only.
 - `packages/scripts/src/*` is for offline indexing and utility scripts only.
@@ -109,15 +116,20 @@ The repo is optimized for **low-cost demos** (no always-on DB). With ~500 produc
 - Cross-package dependencies should use workspace references (`workspace:*`).
 
 ### 3.3 Keep functions pure where possible
+
 - Retrieval, fusion, filters should be deterministic.
 - Only `bedrock.ts`, `catalog.ts`, and handler files should do I/O.
 - Core business logic in `@ai-commerce/core` should be testable in isolation.
 
 ### 3.4 Minimal breaking changes
-- Changes to normalized schema must be backwards-compatible or must include a migration plan and artifact rebuild step.
+
+- Changes to normalized schema must be backwards-compatible or must include a migration plan and
+  artifact rebuild step.
 
 ### 3.5 Code Language Standards
-- **ALL code must be written in English**: variable names, function names, class names, comments, documentation
+
+- **ALL code must be written in English**: variable names, function names, class names, comments,
+  documentation
 - **ALL comments must be in English**: inline comments, JSDoc, README files, code documentation
 - This applies regardless of the input language or user's native language
 - Use clear, descriptive English names that follow standard conventions
@@ -126,9 +138,11 @@ The repo is optimized for **low-cost demos** (no always-on DB). With ~500 produc
 
 ## 4) Normalized Product Schema (canonical)
 
-All retrieval and generation operates on this normalized schema (see `packages/core/src/lib/types.ts`):
+All retrieval and generation operates on this normalized schema (see
+`packages/core/src/lib/types.ts`):
 
 Required fields:
+
 - `id: number`
 - `title: string`
 - `url: string`
@@ -140,9 +154,10 @@ Required fields:
 - `price_max: number`
 - `images: { src: string }[]`
 - `description_text: string`
-- `doc_text: string`  (used by BM25 & embeddings)
+- `doc_text: string` (used by BM25 & embeddings)
 
 Optional:
+
 - `variants: { sku?: string; price?: number; available?: boolean }[]`
 - `attributes: Record<string, any>` (inferred specs: norms, material, load_kg, etc.)
 - `embedding?: number[]` (not required in catalog; typically stored separately)
@@ -154,23 +169,27 @@ If adding new fields, keep them optional by default.
 ## 5) Retrieval Details
 
 ### BM25
+
 - Input: `doc_text`
 - Output: ranked list of product IDs
 
 ### Embeddings
+
 - Product embeddings are computed offline.
 - Query embedding is computed online.
 - Similarity: cosine similarity
 - Output: ranked list of product IDs
 
 ### Rank Fusion (RRF)
-- Combine BM25 rank and embedding rank using RRF:
-  `score = Σ 1 / (k + rank)`
+
+- Combine BM25 rank and embedding rank using RRF: `score = Σ 1 / (k + rank)`
 - Default `k = 60`
 - Output: fused ranking
 
 ### Hard Filters
+
 Apply after fusion:
+
 - `available_only`
 - `max_price`
 - `vendor`
@@ -185,6 +204,7 @@ The main endpoint should remain:
 
 - `POST /chat`
 - Input:
+
 ```json
 {
   "userMessage": "string",
@@ -193,6 +213,7 @@ The main endpoint should remain:
 ```
 
 - Output:
+
 ```json
 {
   "answer": "string",
@@ -215,6 +236,7 @@ The main endpoint should remain:
 ```
 
 Notes:
+
 - The output format may evolve, but `answer` + `recommendations` should remain stable.
 
 ---
@@ -222,6 +244,7 @@ Notes:
 ## 7) Environment Variables
 
 Lambda:
+
 - `CATALOG_BUCKET` — S3 bucket with artifacts
 - `CATALOG_PREFIX` — prefix path for artifacts (e.g. `itower/`)
 - `TITAN_EMBED_MODEL_ID` — Bedrock embeddings model ID
@@ -229,10 +252,12 @@ Lambda:
 - `AWS_REGION`
 
 Optional:
+
 - `LOG_LEVEL` — `debug|info|warn|error`
 - `CACHE_TTL_SECONDS` — artifact refresh window
 
 Build script:
+
 - `CATALOG_SOURCE_URL` or input file path
 - `CATALOG_BUCKET`, `CATALOG_PREFIX`
 - Bedrock model IDs for embedding job
@@ -261,7 +286,8 @@ The repository provides these scripts in the root `package.json`:
 
 - `pnpm --filter @ai-commerce/core build` - Build only core package
 - `pnpm --filter @ai-commerce/lambda test` - Test only lambda package
-- `pnpm --filter @ai-commerce/scripts download:shopify-sitemap <url> <dir>` - Run Shopify sitemap downloader
+- `pnpm --filter @ai-commerce/scripts download:shopify-sitemap <url> <dir>` - Run Shopify sitemap
+  downloader
 
 If these scripts don’t exist yet, agents should add them.
 
@@ -270,18 +296,22 @@ If these scripts don’t exist yet, agents should add them.
 ## 9) Development Workflow
 
 ### 9.1 Add a new catalog source
+
 1. Implement parser in `packages/core/src/lib/normalize.ts`
 2. Ensure normalized output matches canonical schema
 3. Update `packages/scripts/src/build-index.ts`
 4. Rebuild artifacts and validate retrieval works
 
 ### 9.2 Add a new channel adapter (Telegram/Instagram)
+
 1. Create Lambda handler under `packages/lambda/src/*-webhook.ts`
 2. Adapter should only translate channel messages ↔ `/chat` API
 3. Avoid channel-specific business logic in core
 
 ### 9.3 Improve recommendation quality
+
 Preferred order of improvements:
+
 1. Better `doc_text` composition
 2. Better hard filters + inferred attributes
 3. Add query rewriting / constraint extraction
@@ -292,12 +322,14 @@ Preferred order of improvements:
 ## 10) Testing Strategy
 
 Minimum tests:
+
 - Normalize function produces stable schema
 - BM25 returns deterministic results
 - Cosine + fusion behave as expected
 - Filters work and don’t drop all results unexpectedly
 
 Add:
+
 - snapshot tests for normalization
 - small fixture catalog in `examples/generic-json`
 
@@ -316,6 +348,7 @@ Add:
 ## 12) Agent Expectations
 
 When asked to implement features, agents should:
+
 1. Propose the minimal change set
 2. Keep costs low and architecture serverless
 3. Add or update tests
