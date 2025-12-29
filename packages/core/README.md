@@ -9,7 +9,7 @@ LLM-optimized product selection and formatting.
 - **Catalog Management**: Load and normalize Shopify product data
 - **Hybrid Search**: BM25 + semantic similarity with rank fusion
 - **Smart Filtering**: Price, vendor, type, tags, and availability filters
-- **Token Optimization**: Compact product cards (max 250-300 chars each)
+- **Token Optimization**: Compact product cards (150-char descriptions, max 3 tags)
 - **Query Processing**: Extract filters from natural language queries
 
 ## Installation
@@ -29,7 +29,10 @@ const catalogManager = new CatalogManager(catalogData);
 const productSelector = new ProductSelector(catalogManager);
 
 // Select top products for LLM context
-const result = await productSelector.selectProducts('professional ladder under 500');
+const result = await productSelector.selectProducts({
+  query: 'professional ladder under 500',
+  maxResults: 8,
+});
 
 console.log(`Found ${result.total_found} products:`);
 result.products.forEach(product => {
@@ -47,23 +50,24 @@ Main class for product selection and formatting.
 
 #### Methods
 
-##### `selectProducts(query?, filters?, maxResults?)`
+##### `selectProducts(options?)`
 
 Select top products based on query and filters.
 
 ```typescript
-const result = await productSelector.selectProducts(
-  'ladder professional', // Search query (optional)
-  { max_price: 500 }, // Filters (optional)
-  8 // Max results (default: 10)
-);
+const result = await productSelector.selectProducts({
+  query: 'ladder professional', // Search query (optional)
+  filters: { max_price: 500 }, // Filters (optional)
+  maxResults: 8, // Max results (default: 10, max: 10)
+});
 ```
 
 **Parameters:**
 
-- `query` (string, optional): Search query string
-- `filters` (SearchFilters, optional): Filter criteria
-- `maxResults` (number, optional): Maximum results (1-10, default: 10)
+- `options` (object, optional):
+  - `query` (string, optional): Search query string
+  - `filters` (SearchFilters, optional): Filter criteria
+  - `maxResults` (number, optional): Maximum results (1-10, default: 10)
 
 **Returns:** `ProductSelectionResult`
 
@@ -138,7 +142,7 @@ Products are formatted into compact cards optimized for LLM context:
 type ProductCard = {
   id: number;
   title: string;
-  price: string; // Formatted: "€150.00" or "€100.00-200.00"
+  price: string; // Formatted price range (currently hard-coded to "€" in core)
   vendor: string;
   type: string;
   tags: string[]; // Limited to 3 most relevant
@@ -194,7 +198,7 @@ Product cards are optimized for LLM context:
 
 ## Examples
 
-See `src/examples/product-selector-example.ts` for comprehensive usage examples.
+For usage examples, see the unit/integration tests under `src/lib/**`.
 
 ## Testing
 
@@ -222,6 +226,6 @@ This package integrates with:
 ## Performance
 
 - **In-memory operations**: Sub-millisecond search for ~500 products
-- **Lazy loading**: Catalog loaded once, cached in memory
+- **In-memory catalog**: Products are held in memory via `CatalogManager`
 - **Efficient filtering**: Early filtering reduces ranking overhead
 - **Token budget**: Optimized for LLM context windows

@@ -60,14 +60,9 @@ export const processChatMessage =
   async (input): Promise<ProcessChatMessageResult> => {
     const { userId, chatId, messageText } = input;
 
-    // TODO: Implement actual message processing with LLM
-    // 1. Extract user intent and constraints
-    // 2. Call product selector with filters
-    // 3. Generate LLM response with recommendations
-
-    // For now, send acknowledgment response
+    // Mock implementation while the real conversation + recommendation logic is being built.
     await sendResponse({
-      text: `🤖 Message received (${messageText.length} characters). LLM processing is pending implementation.`,
+      text: `🤖 Message received (${messageText.length} characters). Processing is pending implementation.`,
     });
 
     return {

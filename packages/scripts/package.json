@@ -2,7 +2,7 @@
   "name": "@ai-commerce/scripts",
   "version": "1.0.0",
   "description": "Build and utility scripts for AI commerce recommender",
-  "main": "dist/index.js",
+  "main": "dist/download-shopify-sitemap.js",
   "scripts": {
     "build": "tsc",
     "test": "jest --passWithNoTests",

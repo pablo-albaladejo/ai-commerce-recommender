@@ -15,6 +15,11 @@ The infrastructure includes:
 - **CloudWatch Alarms**: Monitoring for errors, performance, and quota breaches
 - **IAM Roles**: Least-privilege permissions for Lambda execution
 
+## Current bot behavior
+
+The deployed Lambda executes a **mock** use-case (`processChatMessage`) that replies with an
+acknowledgement message. Product recommendation logic can be wired in later.
+
 ## Prerequisites
 
 1. **AWS CLI** configured with appropriate credentials
@@ -28,7 +33,7 @@ The infrastructure includes:
 
 ```bash
 # Copy the example file
-cp .env.example .env
+cp env.example .env
 
 # Edit .env with your values:
 # - TELEGRAM_BOT_TOKEN (required) - get from @BotFather
@@ -107,24 +112,18 @@ pnpm cdk deploy telegram-chatbot-dev \
 
 ### Quotas Table
 
-- **Partition Key**: `userId` (string)
-- **Sort Key**: `quotaType` (string)
-- **TTL**: Automatic cleanup of expired quotas
-- **GSI**: `QuotaTypeIndex` for querying by quota type
+- **Partition Key**: `pk` (string)
+- **TTL attribute**: `ttl` (automatic cleanup of expired items)
 
 ### Budgets Table
 
-- **Partition Key**: `userId` (string)
-- **Sort Key**: `budgetPeriod` (string)
-- **TTL**: Automatic cleanup of expired budgets
-- **GSI**: `BudgetPeriodIndex` for querying by period
+- **Partition Key**: `pk` (string)
+- **TTL attribute**: `ttl`
 
 ### Conversation Context Table
 
-- **Partition Key**: `chatId` (string)
-- **Sort Key**: `messageId` (string)
-- **TTL**: Automatic cleanup of old conversations
-- **GSI**: `ChatIdTimestampIndex` for querying recent messages
+- **Partition Key**: `pk` (string)
+- **TTL attribute**: `ttl`
 
 ## Environment Variables
 
@@ -155,6 +154,9 @@ The Lambda function is configured with these environment variables:
 - `TITAN_EMBED_MODEL_ID`: Bedrock embedding model
 - `CLAUDE_MODEL_ID`: Bedrock chat model
 
+> Note: `CATALOG_BUCKET` / `CATALOG_PREFIX` are provisioned for future catalog loading in Lambda.
+> The current bot flow does not use them yet.
+
 ## CloudWatch Alarms
 
 The stack creates several alarms for monitoring:
@@ -172,7 +174,6 @@ The infrastructure is designed for cost efficiency:
 - **HTTP API Gateway**: Lower cost than REST API
 - **ARM64 Lambda**: Better price/performance ratio
 - **Pay-per-request DynamoDB**: No provisioned capacity
-- **Reserved concurrency**: Limits Lambda costs
 - **TTL on DynamoDB**: Automatic data cleanup
 
 ## Security
@@ -180,7 +181,6 @@ The infrastructure is designed for cost efficiency:
 Security features include:
 
 - **Least-privilege IAM**: Minimal required permissions
-- **VPC isolation**: Optional VPC deployment
 - **Signature validation**: Telegram webhook verification
 - **Rate limiting**: Abuse protection middleware
 - **X-Ray tracing**: Request tracking and debugging
