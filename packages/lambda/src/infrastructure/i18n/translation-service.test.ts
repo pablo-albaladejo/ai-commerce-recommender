@@ -1,5 +1,6 @@
 import {
   DEFAULT_LOCALE,
+  type Locale,
   normalizeLocale,
   SUPPORTED_LOCALES,
 } from '../../application/services/translation-service';
@@ -36,12 +37,19 @@ describe('TranslationService', () => {
       expect(message).toContain('daily message limit');
     });
 
-    it('should fall back to default locale for missing translations', () => {
-      // Create a service with an unsupported locale (falls back to default)
-      const service = createTranslationService('en');
+    it('should fall back to default locale for unsupported locale', () => {
+      // Cast an unsupported locale to trigger fallback behavior
+      const unsupportedLocale = 'xx' as Locale;
+      const service = createTranslationService(unsupportedLocale);
+
+      // Get the expected default translation
+      const defaultService = createTranslationService('en');
+      const expectedMessage = defaultService.t('error.internal');
+
+      // The unsupported locale should fall back to default
       const message = service.t('error.internal');
 
-      expect(message).toBeTruthy();
+      expect(message).toBe(expectedMessage);
       expect(message).not.toBe('error.internal');
     });
   });
