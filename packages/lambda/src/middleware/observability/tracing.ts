@@ -265,7 +265,14 @@ const handleError = (
 
   const duration = calculateDuration(trace.timestamp);
 
-  logRequestError({ options, trace, duration, error });
+  // Avoid double-logging errors when an error-handler middleware has already
+  // mapped the error into a response (standard "bubble to central handler" pattern).
+  //
+  // We still record metrics and close the X-Ray subsegment for observability.
+  const isAlreadyHandled = Boolean(request.response);
+  if (!isAlreadyHandled) {
+    logRequestError({ options, trace, duration, error });
+  }
   recordErrorMetrics({ options, duration, error });
   closeSubsegmentError({ subsegment, duration, error });
 };
