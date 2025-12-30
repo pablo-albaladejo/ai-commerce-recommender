@@ -1,77 +1,59 @@
-import type { ChatResponse } from '../services/send-chat-response';
+import type { AgentAction } from '../../domain/agent/actions';
+import type { AgentTurnInput } from '../../domain/agent/turn';
+import type {
+  AgentTurnOutput,
+  RunAgentTurn,
+} from '../services/agent-engine-service';
 
 // ============================================================================
 // Types (colocated with use case)
 // ============================================================================
 
-/** Function to send a response to the chat (injected during composition) */
-export type SendResponseFn = (response: ChatResponse) => Promise<void>;
+/** Function to emit an agent action (injected during composition). */
+export type EmitAgentAction = (action: AgentAction) => Promise<void>;
 
-/** Input for processing a chat message (event data) */
-export type ProcessChatMessageInput = {
-  userId: number;
-  chatId: number;
-  messageId: number;
-  messageText: string;
-  traceId?: string;
-};
-
-/** Result from processing a chat message */
-export type ProcessChatMessageResult = {
-  success: boolean;
-  processed?: {
-    userId: number;
-    chatId: number;
-    messageLength: number;
-  };
-  timestamp: string;
-};
+/** Input for processing an agent turn. */
+export type ProcessChatMessageInput = AgentTurnInput;
 
 /** The composed use case function signature */
 export type ProcessChatMessage = (
   input: ProcessChatMessageInput
-) => Promise<ProcessChatMessageResult>;
+) => Promise<AgentTurnOutput>;
 
 // ============================================================================
 // Use Case: Process Chat Message
 // ============================================================================
 
 /**
- * Process a chat message and generate a response.
+ * Process a single agent "turn" and emit outbound actions.
  *
- * This use case handles the core business logic:
- * - Analyzes the user message
- * - (Future) Calls product selector for recommendations
- * - (Future) Generates LLM response
- * - Sends response via injected sendResponse function
+ * This use case is platform-agnostic:
+ * - Channel adapters translate raw platform updates into `AgentTurnInput`
+ * - Agent engines decide which `AgentAction[]` to emit
+ * - Channel adapters execute emitted actions (Telegram, WhatsApp, WebChat, ...)
  *
- * @param sendResponse - Function to send response (injected during composition)
+ * @param emitAction - Function to emit a single action (injected during composition)
+ * @param runAgentTurn - Agent engine (injected during composition)
  * @returns The composed use case function
  *
  * @example
  * // Composition in handler
- * const useCase = processChatMessage(sendResponse);
+ * const useCase = processChatMessage(emitAction, runAgentTurn);
  *
  * // Execution with event
- * await useCase({ userId, chatId, messageId, messageText });
+ * await useCase(turnInput);
  */
 export const processChatMessage =
-  (sendResponse: SendResponseFn): ProcessChatMessage =>
-  async (input): Promise<ProcessChatMessageResult> => {
-    const { userId, chatId, messageText } = input;
+  (
+    emitAction: EmitAgentAction,
+    runAgentTurn: RunAgentTurn
+  ): ProcessChatMessage =>
+  async (input): Promise<AgentTurnOutput> => {
+    const output = await runAgentTurn(input);
 
-    // Mock implementation while the real conversation + recommendation logic is being built.
-    await sendResponse({
-      text: `🤖 Message received (${messageText.length} characters). Processing is pending implementation.`,
-    });
+    for (const action of output.actions) {
+      await emitAction(action);
+    }
 
-    return {
-      success: true,
-      processed: {
-        userId,
-        chatId,
-        messageLength: messageText.length,
-      },
-      timestamp: new Date().toISOString(),
-    };
+    return output;
   };

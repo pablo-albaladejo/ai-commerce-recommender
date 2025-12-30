@@ -116,7 +116,7 @@ describe('Context Manager Middleware', () => {
       const testMessages: ConversationMessage[] = [
         { role: 'user', content: 'Hello', timestamp: new Date().toISOString() },
         {
-          role: 'assistant',
+          role: 'agent',
           content: 'Hi there',
           timestamp: new Date().toISOString(),
         },
@@ -219,7 +219,7 @@ describe('Context Manager Middleware', () => {
         };
         const newMessages: ConversationMessage[] = [
           {
-            role: 'assistant',
+            role: 'agent',
             content: 'Hi',
             timestamp: new Date().toISOString(),
           },
@@ -243,10 +243,10 @@ describe('Context Manager Middleware', () => {
         expect(message.tokenCount).toBe(3); // "Hello world" = 11 chars / 4 = 2.75 -> 3
       });
 
-      test('creates assistant message with token count', () => {
-        const message = createMessage('assistant', 'Hi there!');
+      test('creates agent message with token count', () => {
+        const message = createMessage('agent', 'Hi there!');
 
-        expect(message.role).toBe('assistant');
+        expect(message.role).toBe('agent');
         expect(message.content).toBe('Hi there!');
         expect(message.timestamp).toBeDefined();
         expect(message.tokenCount).toBe(3); // "Hi there!" = 9 chars / 4 = 2.25 -> 3

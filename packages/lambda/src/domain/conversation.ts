@@ -6,7 +6,7 @@
  * Message in a conversation
  */
 export type ConversationMessage = {
-  role: 'user' | 'assistant';
+  role: 'user' | 'agent';
   content: string;
   timestamp: string;
   tokenCount?: number;

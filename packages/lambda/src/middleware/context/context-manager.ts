@@ -112,7 +112,7 @@ export const addConversationMessages = (
  * Create a message object
  */
 export const createMessage = (
-  role: 'user' | 'assistant',
+  role: 'user' | 'agent',
   content: string
 ): ConversationMessage => ({
   role,
