@@ -19,7 +19,6 @@ import { sendTelegramResponseService } from '../../infrastructure/services/send-
 import * as signatureService from '../../infrastructure/services/signature-validation-service';
 import { getTelegramClient } from '../../infrastructure/shared/telegram-client';
 import {
-  createErrorHandlerDeps,
   createTelegramAbuseProtection,
   createTelegramContextManager,
   createTelegramSignatureValidation,
@@ -30,11 +29,17 @@ import {
   TelegramUpdateSchema,
 } from '../../infrastructure/telegram/telegram-schemas';
 import { telegramTextMessageToAgentTurn } from '../../infrastructure/telegram/telegram-turn-mapper';
-import { getLocaleFromUpdate } from '../../infrastructure/telegram/telegram-utils';
+import {
+  getLocaleFromUpdate,
+  parseTelegramUpdate,
+} from '../../infrastructure/telegram/telegram-utils';
 import { abuseProtectionMiddleware } from '../../middleware/abuse-protection/abuse-protection';
 import { contextManagerMiddleware } from '../../middleware/context/context-manager';
 import { i18nMiddleware } from '../../middleware/i18n/i18n-middleware';
-import { errorHandlerMiddleware } from '../../middleware/observability/error-handler';
+import {
+  errorHandlerMiddleware,
+  type NotifyUser,
+} from '../../middleware/observability/error-handler';
 import { tracingMiddleware } from '../../middleware/observability/tracing';
 import { signatureValidationMiddleware } from '../../middleware/security/signature-validation';
 import { httpResponse } from '../../shared/http-response';
@@ -110,9 +115,25 @@ const contextManager = contextManagerMiddleware(
   createTelegramContextManager(conversationServices)
 );
 
-const errorHandler = errorHandlerMiddleware(
-  createErrorHandlerDeps({ logger, metrics })
-);
+const telegramNotifyUser: NotifyUser = async ({ message, request }) => {
+  const update = parseTelegramUpdate(request.event);
+  const telegramMessage = update?.message || update?.edited_message;
+  if (!telegramMessage) return;
+
+  await sendTelegramResponse(
+    { text: message },
+    {
+      chatId: telegramMessage.chat.id,
+      replyToMessageId: telegramMessage.message_id,
+    }
+  );
+};
+
+const errorHandler = errorHandlerMiddleware({
+  logger,
+  metrics,
+  notifyUser: telegramNotifyUser,
+});
 
 const i18n = i18nMiddleware({ extractLocale: getLocaleFromUpdate });
 

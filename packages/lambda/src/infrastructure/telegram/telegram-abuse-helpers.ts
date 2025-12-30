@@ -2,9 +2,6 @@
  * Telegram-specific helpers for middleware composition
  */
 
-import type { Logger } from '@aws-lambda-powertools/logger';
-import type { Metrics } from '@aws-lambda-powertools/metrics';
-
 import type {
   AddConversationMessage,
   GetConversationContext,
@@ -188,26 +185,4 @@ export const createTelegramContextManager = (
   addMessage: services.addMessage,
   extractUserId: getUserIdFromUpdate,
   extractChatId: getChatIdAsNumber,
-});
-
-// ============================================================================
-// Error Handler Factory
-// ============================================================================
-
-export type Powertools = {
-  logger: Logger;
-  metrics: Metrics;
-};
-
-/**
- * Creates dependencies for errorHandlerMiddleware.
- *
- * @example
- * const errorHandler = errorHandlerMiddleware(
- *   createErrorHandlerDeps(powertools)
- * );
- */
-export const createErrorHandlerDeps = (powertools: Powertools) => ({
-  logger: powertools.logger,
-  metrics: powertools.metrics,
 });
