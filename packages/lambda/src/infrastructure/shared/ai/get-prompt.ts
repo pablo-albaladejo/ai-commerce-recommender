@@ -18,7 +18,7 @@ export type GetPromptDefinitionParams<F extends string, Input> = {
 };
 
 export type GetPromptDefinitionResult = {
-  structuredOutput: (...args: any[]) => unknown;
+  structuredOutput: (...args: unknown[]) => unknown;
   systemPrompt: {
     metadata: { key: string; language: string; version: string };
     prompt: string;
