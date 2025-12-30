@@ -53,6 +53,15 @@ const createErrorResponse = (params: ErrorResponseParams) => ({
   },
 });
 
+const calculateDurationMs = (
+  startTimestamp: string | undefined
+): number | undefined => {
+  if (!startTimestamp) return undefined;
+  const start = Date.parse(startTimestamp);
+  if (Number.isNaN(start)) return undefined;
+  return Date.now() - start;
+};
+
 type RateLimitErrorParams = {
   error: RateLimitError;
   translator: TranslationService;
@@ -124,6 +133,8 @@ export const errorHandlerMiddleware =
       onError: async request => {
         const ctx = request.context as unknown as ExtendedLambdaContext;
         const traceId = ctx.trace?.traceId;
+        const requestId = ctx.trace?.requestId;
+        const duration = calculateDurationMs(ctx.trace?.timestamp);
         const error = request.error as Error;
 
         // Get translation service from context or use default
@@ -132,7 +143,9 @@ export const errorHandlerMiddleware =
         logger?.error('Request error', {
           operation: 'handle-error',
           traceId,
+          requestId,
           component,
+          duration,
           locale: translator.getLocale(),
           error: { name: error?.name, message: error?.message },
         });

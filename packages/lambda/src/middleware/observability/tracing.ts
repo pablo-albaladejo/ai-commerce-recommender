@@ -29,13 +29,6 @@ type RequestWithSubsegment = middy.Request & {
 /**
  * Error with optional statusCode
  */
-type ErrorWithStatusCode = Error & {
-  statusCode?: number;
-};
-
-/**
- * Parameters for subsegment annotations
- */
 type SubsegmentAnnotationParams = {
   subsegment: Subsegment;
   traceId: string;
@@ -51,16 +44,6 @@ type LogSuccessParams = {
   trace: TraceContext;
   duration: number;
   response?: { statusCode?: number; body?: string };
-};
-
-/**
- * Parameters for logging request error
- */
-type LogErrorParams = {
-  options: TracingMiddlewareOptions;
-  trace: TraceContext;
-  duration: number;
-  error: Error | null;
 };
 
 /**
@@ -265,38 +248,8 @@ const handleError = (
 
   const duration = calculateDuration(trace.timestamp);
 
-  // Avoid double-logging errors when an error-handler middleware has already
-  // mapped the error into a response (standard "bubble to central handler" pattern).
-  //
-  // We still record metrics and close the X-Ray subsegment for observability.
-  const isAlreadyHandled = Boolean(request.response);
-  if (!isAlreadyHandled) {
-    logRequestError({ options, trace, duration, error });
-  }
   recordErrorMetrics({ options, duration, error });
   closeSubsegmentError({ subsegment, duration, error });
-};
-
-/**
- * Logs request error with full context
- */
-const logRequestError = (params: LogErrorParams): void => {
-  const { options, trace, duration, error } = params;
-  const errorWithStatus = error as ErrorWithStatusCode | null;
-
-  options.logger?.error('Request failed', {
-    operation: 'handle-request',
-    traceId: trace.traceId,
-    requestId: trace.requestId,
-    component: options.component,
-    duration,
-    error: {
-      name: error?.name || 'UnknownError',
-      message: error?.message || 'Unknown error occurred',
-      stack: error?.stack,
-      statusCode: errorWithStatus?.statusCode,
-    },
-  });
 };
 
 /**

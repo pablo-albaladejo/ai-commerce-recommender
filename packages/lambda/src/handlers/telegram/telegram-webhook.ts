@@ -206,4 +206,4 @@ export const handler = middy(baseHandler)
     })
   )
   .use(contextManager())
-  .use(errorHandler());
+  .use(errorHandler({ component: 'telegram-webhook' }));
