@@ -57,6 +57,45 @@ const isValidationError = (error: Error): boolean =>
 
 const isAiSdkError = (error: Error): boolean => error?.name?.startsWith('AI_');
 
+const normalizeRetryAfterSeconds = (retryAfter: number | undefined): number =>
+  retryAfter ?? 60;
+
+const mapKnownErrorToUserMessage = (
+  error: Error,
+  translator: TranslationService
+): string | null => {
+  if (error instanceof RateLimitError) {
+    const retryAfter = normalizeRetryAfterSeconds(error.info.retryAfter);
+    return translator.t('error.rateLimited', { retryAfter });
+  }
+  if (error instanceof DailyQuotaError) {
+    return translator.t('error.dailyQuotaExceeded', {
+      limit: error.info.limit,
+      resetTime: error.info.resetTime,
+    });
+  }
+  if (error instanceof TokenBudgetError) {
+    return translator.t('error.tokenBudgetExceeded', {
+      limit: error.info.limit,
+      resetTime: error.info.resetTime,
+    });
+  }
+  if (error instanceof SignatureValidationError) {
+    return translator.t('error.unauthorized');
+  }
+  if (isValidationError(error)) {
+    return translator.t('error.validation');
+  }
+  return null;
+};
+
+export const mapErrorToUserMessage = (
+  error: Error,
+  translator: TranslationService
+): string =>
+  mapKnownErrorToUserMessage(error, translator) ??
+  translator.t('error.internal');
+
 type RateLimitErrorParams = {
   error: RateLimitError;
   translator: TranslationService;
@@ -69,7 +108,7 @@ const handleRateLimitError = ({
   traceId,
 }: RateLimitErrorParams) =>
   createErrorResponse({
-    statusCode: 429,
+    statusCode: 200,
     code: 'RATE_LIMIT_EXCEEDED',
     message: translator.t('error.rateLimited', {
       retryAfter: error.info.retryAfter || 60,
@@ -98,7 +137,7 @@ const handleQuotaError = ({
   traceId,
 }: QuotaErrorParams) =>
   createErrorResponse({
-    statusCode: 429,
+    statusCode: 200,
     code,
     message: translator.t(translationKey, {
       limit: error.info.limit,

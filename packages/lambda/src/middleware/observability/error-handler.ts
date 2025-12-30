@@ -3,7 +3,55 @@ import type { Metrics } from '@aws-lambda-powertools/metrics';
 import middy from '@middy/core';
 import { defaultTranslationService } from '../../infrastructure/i18n/translation-service';
 import type { ExtendedLambdaContext } from '../types/lambda-context';
-import { calculateDurationMs, mapErrorToResponse } from './error-handler.logic';
+import {
+  calculateDurationMs,
+  mapErrorToResponse,
+  mapErrorToUserMessage,
+} from './error-handler.logic';
+
+type ErrorLogDetails = {
+  name: string;
+  message: string;
+  stack?: string;
+  statusCode?: number;
+  url?: string;
+  responseBodyLength?: number;
+  cause?: { name: string; message: string };
+};
+
+const buildErrorLogDetails = (error: Error): ErrorLogDetails => {
+  const details: ErrorLogDetails = {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  };
+
+  const anyError = error as unknown as Record<string, unknown>;
+
+  const statusCode = anyError.statusCode;
+  if (typeof statusCode === 'number') {
+    details.statusCode = statusCode;
+  }
+
+  const url = anyError.url;
+  if (typeof url === 'string') {
+    details.url = url;
+  }
+
+  const responseBody = anyError.responseBody;
+  if (typeof responseBody === 'string') {
+    details.responseBodyLength = responseBody.length;
+  } else if (responseBody instanceof Uint8Array) {
+    details.responseBodyLength = responseBody.byteLength;
+  }
+
+  const cause = (error as unknown as { cause?: unknown }).cause;
+  if (cause instanceof Error) {
+    details.cause = { name: cause.name, message: cause.message };
+  }
+
+  return details;
+};
 
 // ============================================================================
 // Types
@@ -97,7 +145,7 @@ export const errorHandlerMiddleware =
           component,
           duration,
           locale: translator.getLocale(),
-          error: { name: error?.name, message: error?.message },
+          error: buildErrorLogDetails(error),
         });
 
         const response = mapErrorToResponse({
@@ -110,7 +158,7 @@ export const errorHandlerMiddleware =
         request.response = response;
 
         if (notifyUser) {
-          const message = translator.t('error.internal');
+          const message = mapErrorToUserMessage(error, translator);
 
           await notifyUserSafely({
             notifyUser,

@@ -104,7 +104,7 @@ const runAgentTurn = createSingleTurnLlmAgent(getAgentReply);
 // ============================================================================
 
 const abuseProtection = abuseProtectionMiddleware(
-  createTelegramAbuseProtection(telegramClient, counterServices)
+  createTelegramAbuseProtection(counterServices)
 );
 
 const signatureValidation = signatureValidationMiddleware(
