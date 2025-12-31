@@ -28,7 +28,9 @@ export type TranslationKey =
   | 'error.internal'
   // Success messages
   | 'message.welcome'
-  | 'message.processing';
+  | 'message.processing'
+  // Guardrails / refusals
+  | 'message.outOfScopeCommerce';
 
 /**
  * Parameters that can be interpolated into translation strings.

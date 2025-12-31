@@ -35,6 +35,11 @@ export type AgentModelInput = {
   messages: AgentMessage[];
   /** Optional tracing metadata */
   traceId?: string;
+  /**
+   * Optional user locale (BCP 47 language tag, e.g. "en", "es-AR").
+   * Useful for i18n decisions (e.g. guardrail refusal messages).
+   */
+  locale?: string;
   identity?: {
     channel?: ChannelId;
     actorId?: string;

@@ -11,6 +11,8 @@ import { Architecture, Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import { configureCommerceGuardrail } from './bedrock-commerce-guardrail';
+import { createBedrockGuardrailsCustomResourceRole } from './bedrock-guardrails-iam';
 import {
   createCustomAlarm,
   createDynamoThrottleAlarm,
@@ -26,6 +28,12 @@ export type TelegramChatbotStackProps = StackProps & {
   catalogBucket?: string;
   catalogPrefix?: string;
   bedrockModels?: { embedModel?: string; chatModel?: string };
+  /**
+   * When enabled, provisions and enforces an account-level Bedrock Guardrail to constrain
+   * model invocations (e.g. commerce-only scope). This is an account-level setting and
+   * can impact other Bedrock workloads in the same AWS account/region.
+   */
+  commerceGuardrailEnabled?: boolean;
 };
 
 type LambdaConfig = Pick<
@@ -36,6 +44,7 @@ type LambdaConfig = Pick<
   | 'catalogBucket'
   | 'catalogPrefix'
   | 'bedrockModels'
+  | 'commerceGuardrailEnabled'
 >;
 
 export class TelegramChatbotStack extends Stack {
@@ -89,7 +98,18 @@ export class TelegramChatbotStack extends Stack {
       catalogBucket,
       catalogPrefix,
       bedrockModels,
+      commerceGuardrailEnabled: props.commerceGuardrailEnabled,
     });
+
+    if (props.commerceGuardrailEnabled) {
+      const bedrockGuardrailsRole =
+        createBedrockGuardrailsCustomResourceRole(this);
+      configureCommerceGuardrail(this, {
+        environment,
+        stackName: this.stackName,
+        role: bedrockGuardrailsRole,
+      });
+    }
     this.grantPermissions(catalogBucket);
 
     this.httpApi = this.createHttpApi();
@@ -179,6 +199,9 @@ export class TelegramChatbotStack extends Stack {
         config.bedrockModels?.chatModel ||
         'anthropic.claude-3-haiku-20240307-v1:0',
       CACHE_TTL_SECONDS: '300',
+      ...(config.commerceGuardrailEnabled && {
+        COMMERCE_GUARDRAIL_ENABLED: 'true',
+      }),
     };
   }
 
@@ -194,8 +217,16 @@ export class TelegramChatbotStack extends Stack {
         actions: [
           'bedrock:InvokeModel',
           'bedrock:InvokeModelWithResponseStream',
+          // Required when Bedrock Guardrails are enforced (account/org level) and Bedrock needs to apply them
+          // during inference (e.g. Converse API returning guardrail_intervened).
+          'bedrock:ApplyGuardrail',
         ],
-        resources: [`arn:aws:bedrock:${this.region}::foundation-model/*`],
+        resources: [
+          // Foundation models are AWS-owned (no account id in ARN)
+          `arn:aws:bedrock:${this.region}::foundation-model/*`,
+          // Guardrails are account-scoped
+          `arn:aws:bedrock:${this.region}:${this.account}:guardrail/*`,
+        ],
       })
     );
     if (catalogBucket) {

@@ -117,6 +117,16 @@ The deploy script reads `packages/infra/.env` (copy from `packages/infra/env.exa
 - `CATALOG_INPUT_FILE` (required for `pnpm index:build`)
 - `CATALOG_BUCKET` + `CATALOG_PREFIX` (required for `pnpm index:upload`)
 
+### Runtime (`packages/lambda`)
+
+- `CLAUDE_MODEL_ID` (required): Bedrock chat model id used by the AI SDK adapter.
+- `AWS_REGION` / `AWS_DEFAULT_REGION` (required): region used for Bedrock inference.
+- `COMMERCE_GUARDRAIL_ENABLED` (optional, default `false`): when `true`, and Bedrock returns
+  `rawFinishReason=guardrail_intervened` (e.g. due to an account/org-enforced Bedrock Guardrail), we
+  return a localized refusal message.
+- Refusal copy is localized via the i18n translation key `message.outOfScopeCommerce` (see
+  `packages/lambda/src/infrastructure/i18n/translations/*`).
+
 ## 7) Testing
 
 - `@ai-commerce/core`: unit + integration tests for normalization, ranking, selector

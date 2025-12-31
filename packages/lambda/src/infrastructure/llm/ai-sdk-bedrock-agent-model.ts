@@ -10,19 +10,17 @@ import type {
   GenerateAgentReply,
   TokenUsage,
 } from '../../application/services/agent-model-service';
+import { normalizeLocale } from '../../application/services/translation-service';
 import { contentToPlainText, textContent } from '../../domain/agent/content';
 import type { AgentMessage } from '../../domain/agent/message';
+import { createTranslationService } from '../i18n/translation-service';
 
 export type AiSdkBedrockAgentModelConfig = {
   modelId: string;
   region: string;
   maxOutputTokens: number;
   temperature: number;
-  systemPrompt: string;
 };
-
-const DEFAULT_SYSTEM_PROMPT =
-  'You are a helpful, concise commerce agent. Answer the user in the same language as their message.';
 
 const requireString = (
   value: string | undefined,
@@ -49,36 +47,39 @@ const resolveTemperature = (
   overrides: Partial<AiSdkBedrockAgentModelConfig>
 ): number => overrides.temperature ?? 0.7;
 
-const resolveSystemPrompt = (
-  overrides: Partial<AiSdkBedrockAgentModelConfig>
-): string => overrides.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
-
-type AiSdkUsage = {
-  promptTokens?: number;
-  completionTokens?: number;
-  totalTokens?: number;
-};
+const numberOrZero = (value: number | undefined): number => value ?? 0;
 
 const toTokenUsage = (
-  usage: AiSdkUsage | undefined
+  usage:
+    | {
+        inputTokens?: number;
+        outputTokens?: number;
+      }
+    | undefined
 ): TokenUsage | undefined => {
   if (!usage) return undefined;
-
-  const inputTokens = usage.promptTokens ?? 0;
-  const outputTokens = usage.completionTokens ?? 0;
-  const totalTokens = usage.totalTokens ?? inputTokens + outputTokens;
-
-  return { inputTokens, outputTokens, totalTokens };
+  const inputTokens = numberOrZero(usage.inputTokens);
+  const outputTokens = numberOrZero(usage.outputTokens);
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: inputTokens + outputTokens,
+  };
 };
 
 type AiSdkMessage = { role: 'user' | 'assistant'; content: string };
 
 const toAiSdkMessages = (messages: AgentMessage[]): AiSdkMessage[] => {
-  return messages.map(m => ({
-    role: m.role === 'agent' ? 'assistant' : 'user',
-    content: contentToPlainText(m.content),
-  }));
+  return messages.map(m => {
+    return {
+      role: m.role === 'agent' ? 'assistant' : 'user',
+      content: contentToPlainText(m.content),
+    };
+  });
 };
+
+const isCommerceGuardrailEnabled = (): boolean =>
+  (process.env.COMMERCE_GUARDRAIL_ENABLED ?? 'false').toLowerCase() === 'true';
 
 export const createAiSdkBedrockAgentModel = (
   config: AiSdkBedrockAgentModelConfig
@@ -92,8 +93,11 @@ export const createAiSdkBedrockAgentModel = (
   >[0]['model'];
 
   return async (input: AgentModelInput): Promise<AgentModelOutput> => {
-    const system = input.systemPrompt ?? config.systemPrompt;
-    const { text, usage, finishReason } = await generateText({
+    // Prompts are resolved upstream via the prompt registry (`getPromptDefinition`).
+    // This adapter should not own prompt content; it only passes through the system prompt.
+    const system = input.systemPrompt;
+
+    const { text, usage, finishReason, rawFinishReason } = await generateText({
       model,
       system,
       messages: toAiSdkMessages(input.messages),
@@ -101,11 +105,23 @@ export const createAiSdkBedrockAgentModel = (
       temperature: config.temperature,
     });
 
+    // If an account/org-level Bedrock guardrail is enforced, Bedrock can return
+    // `guardrail_intervened` as raw finish reason. In that case, we return our
+    // localized refusal message (instead of provider/default text).
+    let finalText = text;
+    if (isCommerceGuardrailEnabled()) {
+      if (rawFinishReason === 'guardrail_intervened') {
+        finalText = createTranslationService(normalizeLocale(input.locale)).t(
+          'message.outOfScopeCommerce'
+        );
+      }
+    }
+
     return {
-      message: { role: 'agent', content: textContent(text) },
+      message: { role: 'agent', content: textContent(finalText) },
       modelId: config.modelId,
       finishReason,
-      tokenUsage: toTokenUsage(usage as AiSdkUsage | undefined),
+      tokenUsage: toTokenUsage(usage),
     };
   };
 };
@@ -132,7 +148,6 @@ export const createAiSdkBedrockAgentModelFromEnv = (
     ),
     maxOutputTokens: resolveMaxOutputTokens(overrides),
     temperature: resolveTemperature(overrides),
-    systemPrompt: resolveSystemPrompt(overrides),
   });
 
   return async (input: AgentModelInput): Promise<AgentModelOutput> => {

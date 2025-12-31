@@ -24,4 +24,6 @@ export const pt: TranslationMessages = {
   'message.welcome':
     'Bem-vindo! Sou seu assistente de compras. Como posso ajudá-lo hoje?',
   'message.processing': 'Processando sua solicitação...',
+  'message.outOfScopeCommerce':
+    'Desculpe, só posso responder perguntas sobre esta loja.',
 };

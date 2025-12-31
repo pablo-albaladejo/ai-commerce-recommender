@@ -131,11 +131,26 @@ pnpm cdk deploy telegram-chatbot-dev \
   -c catalogBucket=your-catalog-bucket \
   -c catalogPrefix=your-prefix/ \
   -c embedModel=amazon.titan-embed-text-v1 \
-  -c chatModel=anthropic.claude-3-haiku-20240307-v1:0
+  -c chatModel=anthropic.claude-3-haiku-20240307-v1:0 \
+  -c commerceGuardrailEnabled=true
 ```
 
 > Note: `catalogBucket` / `catalogPrefix` are provisioned for future catalog loading in Lambda. The
 > current bot use-case is a mock and does not use them yet.
+
+### Commerce-only scope (Bedrock Guardrails)
+
+When `commerceGuardrailEnabled=true`, the CDK stack will:
+
+- Create a Bedrock Guardrail (topics policy) intended to block non-commerce topics
+- Create a guardrail version
+- Set an **account-level enforced guardrail configuration** in the deployment region
+
+**Warning**: account-level enforced guardrails can affect other Bedrock invocations in the same AWS
+account/region. Enable this only if you control that account usage.
+
+If guardrails are enforced, the webhook Lambda role must allow `bedrock:ApplyGuardrail`. This stack
+grants that permission automatically as part of its Bedrock IAM policy.
 
 ## Monitoring
 

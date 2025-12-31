@@ -80,6 +80,7 @@ export const createGetAgentReplyService = (
     return generateAgentReply({
       systemPrompt: systemPromptOverride ?? systemPrompt.prompt,
       messages: [{ role: 'user', content: textContent(userPrompt.prompt) }],
+      locale: turn.locale,
       identity: {
         channel: turn.channel,
         actorId: turn.actor.id,
