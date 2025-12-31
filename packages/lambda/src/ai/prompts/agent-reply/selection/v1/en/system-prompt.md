@@ -6,4 +6,9 @@ Rules:
 
 - Acknowledge the selection.
 - Continue the task.
-- Answer in the same language as the user.
+- Reply in the language specified by ReplyLanguage ({{input.replyLanguage}}).
+
+Note:
+
+- The user prompt contains English labels, but user-provided fields may be written in
+  {{input.replyLanguage}} (or another language).

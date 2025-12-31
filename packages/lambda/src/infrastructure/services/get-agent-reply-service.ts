@@ -63,8 +63,11 @@ export const createGetAgentReplyService = (
 ): GetAgentReplyService => {
   return async ({ turn, systemPromptOverride }): Promise<AgentModelOutput> => {
     const family = getFamilyForTurn(turn);
-    const templateInput = buildTemplateInput(turn);
     const language = localeToLanguage(turn.locale);
+    const templateInput = {
+      ...buildTemplateInput(turn),
+      replyLanguage: language,
+    };
 
     const { systemPrompt, userPrompt } = getPromptDefinition('agentReply', {
       family,
