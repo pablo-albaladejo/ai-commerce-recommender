@@ -6,9 +6,9 @@ AWS that can recommend products from a **public Shopify catalog** (no credential
 ## 0) Current status (important)
 
 - **Deployed entrypoint**: `POST /telegram/webhook` (API Gateway HTTP API → Lambda)
-- **Message processing**: `packages/lambda/src/application/use-cases/process-chat-message.ts` is
-  intentionally a **mock** (acknowledgement only). Do not implement recommendation logic unless
-  explicitly requested.
+- **Message processing**: `packages/lambda/src/application/use-cases/process-chat-message.ts` is a
+  minimal **LLM-powered reply** (single-turn). Recommendation logic is still not wired into the
+  Lambda flow unless explicitly requested.
 - **Recommendation building blocks**: live in `@ai-commerce/core` (catalog normalization, filters,
   ranking, product cards). They are not wired into the Lambda flow yet.
 - **Catalog pipeline scripts** exist (download → build artifacts → upload to S3), primarily to make
@@ -36,9 +36,9 @@ AWS that can recommend products from a **public Shopify catalog** (no credential
 3. Validate webhook signature (optional; required in `prod`)
 4. Apply abuse protection (rate limit + quota + token budget)
 5. Load conversation context (DynamoDB)
-6. Execute `processChatMessage` (mock) and send the Telegram message
+6. Execute `processChatMessage` (LLM reply) and send the Telegram message
 
-Planned: integrate `ProductSelector` and (optionally) Bedrock for richer replies.
+Planned: integrate `ProductSelector` for recommendations and expand LLM usage with memory/session.
 
 ## 2) Repository layout (current)
 

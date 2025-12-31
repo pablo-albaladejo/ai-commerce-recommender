@@ -127,6 +127,9 @@ export class TelegramChatbotStack extends Stack {
         minify: true,
         sourceMap: true,
         // Do not externalize AWS SDK v3 modules - they are not guaranteed to be present in the runtime.
+        loader: {
+          '.md': 'text',
+        },
         forceDockerBundling: false, // Use local esbuild instead of Docker (required for CI)
       },
     });

@@ -1,3 +1,5 @@
+import { textContent } from '../../domain/agent/content';
+import { AgentTurnOutputBuilder } from '../../tests/fixtures/agent-turn.builder';
 import {
   TelegramChatBuilder,
   TelegramMessageBuilder,
@@ -13,38 +15,43 @@ jest.mock('../../infrastructure/shared/telegram-client', () => ({
   }),
 }));
 
-// Mock the curried use-case: processChatMessage(sendResponse) => (input) => result
+// Mock the curried use-case: processChatMessage(emitAction, runAgentTurn) => (input) => result
 const mockUseCaseExecutor = jest.fn();
 jest.mock('../../application/use-cases/process-chat-message', () => ({
-  processChatMessage: jest.fn(
-    (_sendResponse: SendResponseFn): ProcessChatMessage => mockUseCaseExecutor
-  ),
+  processChatMessage: jest.fn(() => mockUseCaseExecutor),
 }));
 
 // Import after mocks are set up (inline type imports to avoid duplicate-imports error)
+import type { RunAgentTurn } from '../../application/services/agent-engine-service';
 import {
   processChatMessage,
+  type EmitAgentAction,
   type ProcessChatMessage,
-  type SendResponseFn,
 } from '../../application/use-cases/process-chat-message';
-import { baseHandler, type TelegramWebhookEvent } from './telegram-webhook';
+import type { TelegramUpdate } from '../../infrastructure/telegram/telegram-schemas';
+import { baseHandler } from './telegram-webhook';
 
 const mockProcessChatMessage = processChatMessage as jest.MockedFunction<
   typeof processChatMessage
 >;
 
 // After parser middleware, the event IS the TelegramUpdate directly
-const createEvent = (update: Record<string, unknown>): TelegramWebhookEvent =>
-  update as TelegramWebhookEvent;
+const createEvent = (update: Record<string, unknown>): TelegramUpdate =>
+  update as TelegramUpdate;
 
 describe('Telegram Webhook Handler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset the mock implementation to default behavior
     mockProcessChatMessage.mockImplementation(
-      (_sendResponse: SendResponseFn): ProcessChatMessage => mockUseCaseExecutor
+      (
+        _emitAction: EmitAgentAction,
+        _runAgentTurn: RunAgentTurn
+      ): ProcessChatMessage => mockUseCaseExecutor
     );
-    mockUseCaseExecutor.mockResolvedValue({ success: true });
+    mockUseCaseExecutor.mockResolvedValue(
+      AgentTurnOutputBuilder.build({ actions: [] })
+    );
   });
 
   it('composes use-case with sendResponse and executes with event data', async () => {
@@ -58,31 +65,38 @@ describe('Telegram Webhook Handler', () => {
 
     expect(response.statusCode).toBe(200);
 
-    // Verify composition: processChatMessage was called with sendResponse function
-    expect(mockProcessChatMessage).toHaveBeenCalledWith(expect.any(Function));
+    // Verify composition: processChatMessage was called with two injected dependencies
+    expect(mockProcessChatMessage).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function)
+    );
 
     // Verify execution: the composed use-case was called with event data
-    expect(mockUseCaseExecutor).toHaveBeenCalledWith({
-      userId: user.id,
-      chatId: chat.id,
-      messageId: message.message_id,
-      messageText: message.text,
-      traceId: undefined,
-    });
+    expect(mockUseCaseExecutor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'telegram',
+        actor: expect.objectContaining({ id: String(user.id), kind: 'user' }),
+        conversation: expect.objectContaining({ id: String(chat.id) }),
+        event: expect.objectContaining({ type: 'user_message' }),
+      })
+    );
   });
 
   it('injects sendResponse that calls Telegram client via service', async () => {
     const message = TelegramMessageBuilder.build();
 
-    // Capture the sendResponse function during composition
+    // Capture the emitAction function during composition
     mockProcessChatMessage.mockImplementation(
-      (sendResponse: SendResponseFn): ProcessChatMessage =>
+      (emitAction: EmitAgentAction): ProcessChatMessage =>
         async () => {
-          await sendResponse({ text: 'Test response' });
+          const action = {
+            type: 'send_message',
+            content: textContent('Test response'),
+          } as const;
+
+          await emitAction(action);
           return {
-            success: true,
-            processed: { userId: 1, chatId: 1, messageLength: 1 },
-            timestamp: new Date().toISOString(),
+            actions: [action],
           };
         }
     );
@@ -111,14 +125,21 @@ describe('Telegram Webhook Handler', () => {
   });
 
   it('processes edited_message when message is absent', async () => {
-    const editedMessage = TelegramMessageBuilder.build();
+    const editedMessage = TelegramMessageBuilder.build({
+      text: 'Edited message',
+    });
 
     await baseHandler(
       createEvent({ update_id: 1, edited_message: editedMessage })
     );
 
     expect(mockUseCaseExecutor).toHaveBeenCalledWith(
-      expect.objectContaining({ messageText: editedMessage.text })
+      expect.objectContaining({
+        event: expect.objectContaining({
+          type: 'user_message',
+          content: textContent('Edited message'),
+        }),
+      })
     );
   });
 
@@ -138,7 +159,9 @@ describe('Telegram Webhook Handler', () => {
     await baseHandler(createEvent(update));
 
     expect(mockUseCaseExecutor).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: chat.id })
+      expect.objectContaining({
+        actor: expect.objectContaining({ id: String(chat.id) }),
+      })
     );
   });
 

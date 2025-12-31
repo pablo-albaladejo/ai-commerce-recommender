@@ -8,9 +8,7 @@ import type {
 export const ConversationMessageBuilder = Factory.define<ConversationMessage>(
   'ConversationMessage'
 )
-  .attr('role', () =>
-    faker.helpers.arrayElement(['user', 'assistant'] as const)
-  )
+  .attr('role', () => faker.helpers.arrayElement(['user', 'agent'] as const))
   .attr('content', () => faker.lorem.sentence())
   .attr('timestamp', () => new Date().toISOString())
   .attr('tokenCount', () => faker.number.int({ min: 10, max: 100 }));
