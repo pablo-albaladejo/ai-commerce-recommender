@@ -30,6 +30,12 @@ const buildTemplateInput = (turn: AgentTurnInput): Record<string, unknown> => {
         name: turn.event.command.name,
         args: (turn.event.command.args ?? []).join(' '),
       };
+    default:
+      // Exhaustiveness check: this should never happen if types are correct
+      const _exhaustive: never = turn.event;
+      throw new Error(
+        `Unexpected event type: ${(_exhaustive as { type: string }).type}`
+      );
   }
 };
 
@@ -43,6 +49,12 @@ const getFamilyForTurn = (
       return 'selection';
     case 'user_command':
       return 'command';
+    default:
+      // Exhaustiveness check: this should never happen if types are correct
+      const _exhaustive: never = turn.event;
+      throw new Error(
+        `Unexpected event type: ${(_exhaustive as { type: string }).type}`
+      );
   }
 };
 

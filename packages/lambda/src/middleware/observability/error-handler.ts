@@ -19,11 +19,54 @@ type ErrorLogDetails = {
   cause?: { name: string; message: string };
 };
 
+const MAX_LOGGED_ERROR_MESSAGE_LENGTH = 500;
+
+const normalizeLogMessage = (message: string): string =>
+  message.replace(/\s+/g, ' ').trim();
+
+const redactAiSdkTypeValidationValue = (message: string): string => {
+  // AI SDK type validation errors can include full model output JSON. That can leak content, so we redact
+  // the "Value: ..." section and keep only the structured error details.
+  if (!message.includes('Type validation failed:')) return message;
+
+  const marker = 'Error message:';
+  const markerIndex = message.indexOf(marker);
+  if (markerIndex === -1) return message;
+
+  const errorDetails = message.slice(markerIndex).trim();
+  return `Type validation failed. ${errorDetails}`;
+};
+
+const sanitizeErrorTextForLogging = (message: string): string => {
+  const redacted = redactAiSdkTypeValidationValue(message);
+  const normalized = normalizeLogMessage(redacted);
+  if (normalized.length <= MAX_LOGGED_ERROR_MESSAGE_LENGTH) return normalized;
+  return `${normalized.slice(0, MAX_LOGGED_ERROR_MESSAGE_LENGTH)}…`;
+};
+
+const sanitizeErrorStackForLogging = (
+  stack: string | undefined,
+  errorName: string,
+  sanitizedMessage: string
+): string | undefined => {
+  if (!stack) return undefined;
+  const lines = stack.split('\n');
+  if (lines.length === 0) return undefined;
+  lines[0] = `${errorName}: ${sanitizedMessage}`;
+  return lines.join('\n');
+};
+
 const buildErrorLogDetails = (error: Error): ErrorLogDetails => {
+  const sanitizedMessage = sanitizeErrorTextForLogging(error.message);
+
   const details: ErrorLogDetails = {
     name: error.name,
-    message: error.message,
-    stack: error.stack,
+    message: sanitizedMessage,
+    stack: sanitizeErrorStackForLogging(
+      error.stack,
+      error.name,
+      sanitizedMessage
+    ),
   };
 
   const anyError = error as unknown as Record<string, unknown>;
@@ -47,7 +90,10 @@ const buildErrorLogDetails = (error: Error): ErrorLogDetails => {
 
   const cause = (error as unknown as { cause?: unknown }).cause;
   if (cause instanceof Error) {
-    details.cause = { name: cause.name, message: cause.message };
+    details.cause = {
+      name: cause.name,
+      message: sanitizeErrorTextForLogging(cause.message),
+    };
   }
 
   return details;

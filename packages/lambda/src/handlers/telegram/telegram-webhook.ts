@@ -184,23 +184,28 @@ export const baseHandler = async (event: TelegramUpdate) => {
   });
 
   const turn = telegramTextMessageToAgentTurn({
-    message: { ...message, text: message.text },
+    message: message as TelegramMessage & { text: string },
   });
 
   const useCase = processChatMessage(emitAction, runAgentTurn);
 
   const output = await useCase(turn);
 
+  const debugResponseEnabled =
+    process.env.DEBUG_RESPONSE === 'true' || process.env.ENVIRONMENT !== 'prod';
+
   return httpResponse(200, {
     success: true,
-    processed: {
-      channel: turn.channel,
-      actorId: turn.actor.id,
-      conversationId: turn.conversation.id,
-      eventType: turn.event.type,
-      actionsCount: output.actions.length,
-    },
-    llm: output.llm,
+    ...(debugResponseEnabled && {
+      processed: {
+        channel: turn.channel,
+        actorId: turn.actor.id,
+        conversationId: turn.conversation.id,
+        eventType: turn.event.type,
+        actionsCount: output.actions.length,
+      },
+      llm: output.llm,
+    }),
     timestamp: new Date().toISOString(),
   });
 };
