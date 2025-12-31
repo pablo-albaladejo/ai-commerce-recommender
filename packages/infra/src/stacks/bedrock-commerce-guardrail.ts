@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import type { IRole } from 'aws-cdk-lib/aws-iam';
 import {
   AwsCustomResource,
@@ -12,25 +13,70 @@ export type CommerceGuardrailParams = {
   role: IRole;
 };
 
+const computeConfigHash = (value: unknown): string => {
+  const json = JSON.stringify(value);
+  return createHash('sha256').update(json).digest('hex').slice(0, 32);
+};
+
 const buildTopicPolicyConfig = () => {
+  const denyTopic = (params: {
+    name: string;
+    definition: string;
+    examples: string[];
+  }) => {
+    return {
+      name: params.name,
+      definition: params.definition,
+      examples: params.examples,
+      type: 'DENY',
+      inputAction: 'BLOCK',
+      outputAction: 'BLOCK',
+      inputEnabled: true,
+      outputEnabled: true,
+    };
+  };
+
   return {
     topicsConfig: [
-      {
-        name: 'OutOfScopeNonCommerce',
+      denyTopic({
+        name: 'OutOfScopeCreativeWriting',
         definition:
-          'Any user query or assistant response that is not about this store, its products, pricing, discounts, ordering, shipping, returns, or store policies.',
+          "Requests for stories, poems, jokes, roleplay, or other creative/entertainment content that isn't related to the store or shopping.",
         examples: [
-          'What is the weather today?',
-          'Write a poem about the ocean.',
-          'Who won the football match?',
-          'Help me debug this JavaScript code.',
+          // EN / ES / PT / FR / DE+IT (combined) - max 5 examples per topic
+          'Tell me a bedtime story.',
+          'Cuéntame un cuento.',
+          'Conte-me uma história.',
+          'Raconte-moi une histoire.',
+          'Erzähl mir eine Geschichte. / Raccontami una storia.',
         ],
-        type: 'DENY',
-        inputAction: 'BLOCK',
-        outputAction: 'BLOCK',
-        inputEnabled: true,
-        outputEnabled: true,
-      },
+      }),
+      denyTopic({
+        name: 'OutOfScopeGeneralKnowledge',
+        definition:
+          "General knowledge, trivia, news, weather, sports, politics, or educational questions that aren't related to the store or shopping.",
+        examples: [
+          // EN / ES / PT / FR / DE+IT (combined) - max 5 examples per topic
+          'What is the capital of France?',
+          '¿Qué tiempo hace hoy?',
+          'Qual é a capital da França?',
+          'Quel temps fait-il aujourd’hui ?',
+          'Was ist die Hauptstadt von Frankreich? / Qual è la capitale della Francia?',
+        ],
+      }),
+      denyTopic({
+        name: 'OutOfScopeProgrammingHelp',
+        definition:
+          "Programming/debugging/IT support requests that aren't related to the store or shopping.",
+        examples: [
+          // EN / ES / PT / FR / DE+IT (combined) - max 5 examples per topic
+          'Help me debug this JavaScript code.',
+          '¿Cómo arreglo este error de TypeScript?',
+          'Como corrijo este erro de TypeScript?',
+          'Aide-moi à déboguer ce code JavaScript.',
+          'Hilf mir, diesen TypeScript-Fehler zu beheben. / Aiutami a risolvere questo errore TypeScript.',
+        ],
+      }),
     ],
     // NOTE: STANDARD tier can require cross-region inference to be enabled for guardrails
     // (depending on region/account settings). CLASSIC is broadly available and keeps
@@ -55,19 +101,14 @@ const buildGuardrailParameters = (params: {
   };
 };
 
+type GuardrailParameters = ReturnType<typeof buildGuardrailParameters>;
+
 const createCommerceOnlyGuardrail = (params: {
   scope: Construct;
   role: IRole;
-  environment: string;
-  guardrailName: string;
-  blockedMessage: string;
+  guardrailParameters: GuardrailParameters;
 }) => {
-  const { scope, role, environment, guardrailName, blockedMessage } = params;
-  const guardrailParameters = buildGuardrailParameters({
-    environment,
-    guardrailName,
-    blockedMessage,
-  });
+  const { scope, role, guardrailParameters } = params;
 
   return new AwsCustomResource(scope, 'CommerceOnlyGuardrail', {
     role,
@@ -105,8 +146,10 @@ const createCommerceOnlyGuardrailVersion = (params: {
   environment: string;
   stackName: string;
   guardrailId: string;
+  configHash: string;
 }) => {
-  const { scope, role, environment, stackName, guardrailId } = params;
+  const { scope, role, environment, stackName, guardrailId, configHash } =
+    params;
 
   return new AwsCustomResource(scope, 'CommerceOnlyGuardrailVersion', {
     role,
@@ -117,7 +160,8 @@ const createCommerceOnlyGuardrailVersion = (params: {
       action: 'createGuardrailVersion',
       parameters: {
         guardrailIdentifier: guardrailId,
-        description: `Deployed by CDK (${stackName})`,
+        description: `Deployed by CDK (${stackName}) config=${configHash}`,
+        clientRequestToken: configHash,
       },
       physicalResourceId: PhysicalResourceId.of(
         `CommerceOnlyGuardrailVersion-${environment}`
@@ -131,8 +175,10 @@ const createCommerceOnlyEnforcedConfig = (params: {
   role: IRole;
   guardrailId: string;
   guardrailVersionNumber: string;
+  configHash: string;
 }) => {
-  const { scope, role, guardrailId, guardrailVersionNumber } = params;
+  const { scope, role, guardrailId, guardrailVersionNumber, configHash } =
+    params;
 
   return new AwsCustomResource(scope, 'CommerceOnlyEnforcedGuardrailConfig', {
     role,
@@ -147,6 +193,9 @@ const createCommerceOnlyEnforcedConfig = (params: {
           guardrailVersion: guardrailVersionNumber,
           inputTags: 'IGNORE',
         },
+        // Trigger redeploys on guardrail policy changes without affecting the AWS API request.
+        // (Unknown params are ignored by the AWS SDK serializer.)
+        _trigger: configHash,
       },
       physicalResourceId: PhysicalResourceId.fromResponse('configId'),
     },
@@ -160,6 +209,7 @@ const createCommerceOnlyEnforcedConfig = (params: {
           guardrailVersion: guardrailVersionNumber,
           inputTags: 'IGNORE',
         },
+        _trigger: configHash,
       },
     },
     onDelete: {
@@ -187,12 +237,21 @@ export const configureCommerceGuardrail = (
   const guardrailName = `telegram-chatbot-commerce-only-${environment}`;
   const blockedMessage = 'Sorry, I can only answer questions about this store.';
 
-  const guardrail = createCommerceOnlyGuardrail({
-    scope,
-    role,
+  const guardrailParameters = buildGuardrailParameters({
     environment,
     guardrailName,
     blockedMessage,
+  });
+  const configHash = computeConfigHash({
+    topicPolicyConfig: guardrailParameters.topicPolicyConfig,
+    blockedInputMessaging: guardrailParameters.blockedInputMessaging,
+    blockedOutputsMessaging: guardrailParameters.blockedOutputsMessaging,
+  });
+
+  const guardrail = createCommerceOnlyGuardrail({
+    scope,
+    role,
+    guardrailParameters,
   });
 
   const guardrailId = guardrail.getResponseField('guardrailId');
@@ -203,6 +262,7 @@ export const configureCommerceGuardrail = (
     environment,
     stackName,
     guardrailId,
+    configHash,
   });
   guardrailVersion.node.addDependency(guardrail);
 
@@ -213,6 +273,7 @@ export const configureCommerceGuardrail = (
     role,
     guardrailId,
     guardrailVersionNumber,
+    configHash,
   });
   enforcedConfig.node.addDependency(guardrailVersion);
 };
