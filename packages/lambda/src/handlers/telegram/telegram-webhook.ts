@@ -163,9 +163,15 @@ const createTelegramResponseSender = (message: TelegramMessage) => {
  * Exported for unit testing in isolation from middleware chain.
  */
 export const baseHandler = async (event: TelegramUpdate) => {
-  logger.debug('Event received', { event });
-
   const message = event.message || event.edited_message;
+
+  logger.debug('Event received', {
+    updateId: event.update_id,
+    chatId: message?.chat?.id,
+    messageId: message?.message_id,
+    hasText: Boolean(message?.text),
+    isEdited: Boolean(event.edited_message && !event.message),
+  });
 
   if (!message?.text) {
     return httpResponse(200, { success: true, message: 'Update acknowledged' });

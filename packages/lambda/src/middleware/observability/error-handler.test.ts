@@ -96,4 +96,35 @@ describe('errorHandlerMiddleware', () => {
     );
     expect(request.response?.statusCode).toBe(500);
   });
+
+  it('when notifyUser is not configured, still returns an error response without attempting notification', async () => {
+    const logger = { error: jest.fn(), warn: jest.fn() };
+
+    const middleware = errorHandlerMiddleware({
+      logger: logger as unknown as Logger,
+    })();
+
+    const ctx =
+      LambdaContextBuilder.build() as unknown as ExtendedLambdaContext;
+    ctx.trace = {
+      traceId: 'trace-1',
+      requestId: 'req-1',
+      timestamp: new Date().toISOString(),
+      spanId: 'span-1',
+    };
+    ctx.translationService = createTranslationService('en');
+
+    const request = {
+      event: {},
+      context: ctx,
+      response: null,
+      error: new Error('Bug'),
+      internal: {},
+    } as unknown as middy.Request;
+
+    await middleware.onError?.(request);
+
+    expect(logger.error).toHaveBeenCalled();
+    expect(request.response?.statusCode).toBe(500);
+  });
 });

@@ -125,6 +125,7 @@ type QuotaErrorParams = {
   error: DailyQuotaError | TokenBudgetError;
   code: string;
   translationKey: TranslationKey;
+  headerPrefix: 'Daily-Quota' | 'Token-Budget';
   translator: TranslationService;
   traceId?: string;
 };
@@ -133,6 +134,7 @@ const handleQuotaError = ({
   error,
   code,
   translationKey,
+  headerPrefix,
   translator,
   traceId,
 }: QuotaErrorParams) =>
@@ -146,10 +148,8 @@ const handleQuotaError = ({
     traceId,
     headers: {
       'Retry-After': '86400',
-      [`X-${code.includes('QUOTA') ? 'Daily-Quota' : 'Token-Budget'}-Limit`]:
-        String(error.info.limit),
-      [`X-${code.includes('QUOTA') ? 'Daily-Quota' : 'Token-Budget'}-Used`]:
-        String(error.info.used),
+      [`X-${headerPrefix}-Limit`]: String(error.info.limit),
+      [`X-${headerPrefix}-Used`]: String(error.info.used),
     },
   });
 
@@ -185,6 +185,8 @@ const mapDomainErrorToResponse = ({
 }: MapErrorParams) => {
   if (error instanceof RateLimitError) {
     recordMetric(metrics, 'RateLimitErrorHandled');
+    // Telegram retries webhooks on non-2xx responses. Return 200 to stop retries and include
+    // Retry-After headers to guide clients/debugging.
     return handleRateLimitError({ error, translator, traceId });
   }
   if (error instanceof DailyQuotaError) {
@@ -193,6 +195,7 @@ const mapDomainErrorToResponse = ({
       error,
       code: 'DAILY_QUOTA_EXCEEDED',
       translationKey: 'error.dailyQuotaExceeded',
+      headerPrefix: 'Daily-Quota',
       translator,
       traceId,
     });
@@ -203,6 +206,7 @@ const mapDomainErrorToResponse = ({
       error,
       code: 'TOKEN_BUDGET_EXCEEDED',
       translationKey: 'error.tokenBudgetExceeded',
+      headerPrefix: 'Token-Budget',
       translator,
       traceId,
     });
