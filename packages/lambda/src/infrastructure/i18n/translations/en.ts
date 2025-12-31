@@ -13,6 +13,7 @@ export type TranslationMessages = {
   'error.internal': string;
   'message.welcome': string;
   'message.processing': string;
+  'message.outOfScopeCommerce': string;
 };
 
 export const en: TranslationMessages = {
@@ -36,4 +37,6 @@ export const en: TranslationMessages = {
   'message.welcome':
     'Welcome! I am your shopping assistant. How can I help you today?',
   'message.processing': 'Processing your request...',
+  'message.outOfScopeCommerce':
+    'Sorry, I can only answer questions about this store.',
 };

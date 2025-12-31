@@ -1,4 +1,4 @@
-ReplyLanguage: {{input.replyLanguage}} User selection:
+LocaleLanguage (fallback): {{input.replyLanguage}} User selection:
 
 - id: {{input.id}}
 - label: {{input.label}}

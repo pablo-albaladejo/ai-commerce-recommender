@@ -1,4 +1,4 @@
-ReplyLanguage: {{input.replyLanguage}} User command:
+LocaleLanguage (fallback): {{input.replyLanguage}} User command:
 
 - name: {{input.name}}
 - args: {{input.args}}

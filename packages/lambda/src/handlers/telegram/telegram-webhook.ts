@@ -224,7 +224,7 @@ export const handler = middy(baseHandler)
     abuseProtection({
       rateLimit: {
         tableName: tables.rateLimit,
-        maxRequests: 2,
+        maxRequests: 30,
         windowSeconds: 60,
       },
       dailyQuota: {

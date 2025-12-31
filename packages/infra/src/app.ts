@@ -13,6 +13,17 @@ const region =
 const account =
   app.node.tryGetContext('account') || process.env.CDK_DEFAULT_ACCOUNT;
 
+const toBoolean = (value: unknown): boolean | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value.toLowerCase() === 'true';
+  return undefined;
+};
+
+const commerceGuardrailEnabled = toBoolean(
+  app.node.tryGetContext('commerceGuardrailEnabled')
+);
+
 // AWS environment
 const env: Environment = {
   account,
@@ -37,6 +48,9 @@ new TelegramChatbotStack(app, stackName, {
     embedModel: app.node.tryGetContext('embedModel'),
     chatModel: app.node.tryGetContext('chatModel'),
   },
+
+  // Optional: account-level Bedrock Guardrail enforcement (per region)
+  commerceGuardrailEnabled,
 
   // Stack metadata
   description: `Telegram chatbot infrastructure for ${environment} environment`,
